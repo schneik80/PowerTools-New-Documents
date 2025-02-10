@@ -100,9 +100,8 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
             )
         if docActiveUnits == "in" or "ft" or "yd":
             parentdoc = os.path.normpath(
-                os.path.join(app_path, "resources/docs/in/in-Part.f3d")
+                os.path.join(app_path.parent, "new/resources/docs/in/in-Part.f3d")
             )
-
         importOptions = importManager.createFusionArchiveImportOptions(parentdoc)
         importOptions.isViewFit = True
         newDoc = importManager.importToNewDocument(importOptions)

@@ -254,16 +254,17 @@ def palette_incoming(html_args: adsk.core.HTMLEventArgs):
     ui.progressBar.showBusy("Creating new document...")
 
     link = message_data["link"]
+    if link == "ecad-LBR":
+        cmdDefs = ui.commandDefinitions
+        fuscommand = cmdDefs.itemById("NewElectronLbrDocumentCommand")
+        fuscommand.execute()
+        return
+    if link == "ecad-Project":
+        cmdDefs = ui.commandDefinitions
+        fuscommand = cmdDefs.itemById("NewElectronDesignDocumentCommand")
+        fuscommand.execute()
+        return
     if link in newDocsDict:
-        if link == "ecad-LBR":
-            cmdDefs = ui.commandDefinitions
-            fuscommand = cmdDefs.itemById("NewElectronLbrDocumentCommand")
-            fuscommand.execute()
-        if link == "ecad-Project":
-            cmdDefs = ui.commandDefinitions
-            fuscommand = cmdDefs.itemById("NewElectronDesignDocumentCommand")
-            fuscommand.execute()
-            return
         filePath = newDocsDict[link][1]
         importOptions = importManager.createFusionArchiveImportOptions(filePath)
         importOptions.isViewFit = False
