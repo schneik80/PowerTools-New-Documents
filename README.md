@@ -71,8 +71,3 @@ This creates an entry in the file menu to manually save a local recovery save.
 **[Insert STEP](./docs/Insert%20Step.md)**
 
 Browse the local device and insert a STEP file into the active document.
-
-
-**[Share Menu](./docs/Share%20Menu.md)**
-
-Quickly share the active document and control share settings.

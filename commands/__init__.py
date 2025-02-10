@@ -10,9 +10,6 @@ from .new import entry as new
 from .refmanager import entry as refmanager
 from .refrences import entry as refrences
 from .refresh import entry as refresh
-from .sharedocument import entry as sharedocument
-from .sharesettings import entry as sharesettings
-from .shareopendesktop import entry as shareopendesktop
 
 # Fusion will automatically call the start() and stop() functions.
 commands = [
@@ -28,9 +25,6 @@ commands = [
     refmanager,
     refrences,
     refresh,
-    sharedocument,
-    sharesettings,
-    shareopendesktop,
 ]
 
 
