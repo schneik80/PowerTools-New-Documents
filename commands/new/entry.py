@@ -24,11 +24,24 @@ PANEL_NAME = config.my_panel_name
 PANEL_AFTER = config.my_panel_after
 
 
+# Holds references to event handlers
+local_handlers = []
+app = adsk.core.Application.get()
+ui = app.userInterface
+
+# Resource location for command icons, here we assume a sub folder in this directory named "resources".
+ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
+Theme = app.preferences.generalPreferences.userInterfaceTheme
+if Theme == 0:
+    HTML_PAGE = "index-l.html"
+else:
+    HTML_PAGE = "index-d.html"
+
 # Pallet
 PALETTE_NAME = CMD_NAME
 PALETTE_ID = f"{config.COMPANY_NAME}_{config.ADDIN_NAME}_palette_id"
 PALETTE_URL = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "resources", "index.html"
+    os.path.dirname(os.path.abspath(__file__)), "resources", HTML_PAGE
 )
 PALETTE_URL = PALETTE_URL.replace(
     "\\", "/"
@@ -37,13 +50,6 @@ PALETTE_DOCKING = (
     adsk.core.PaletteDockingStates.PaletteDockStateRight
 )  # Set a default docking behavior for the palette
 
-# Resource location for command icons, here we assume a sub folder in this directory named "resources".
-ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
-
-# Holds references to event handlers
-local_handlers = []
-app = adsk.core.Application.get()
-ui = app.userInterface
 
 # Get the paths dictionary from the app
 ## ****** Document MAP ****** ##
