@@ -1,16 +1,12 @@
-# Power Tools for Fusion v0.8
+# PowerTools New Documents tools for Fusion v1.0
 
 Make working as a team, cloud data, and with assemblies more productive.
 
-## Configuration
-
-There are several json files that need to be configured. Documentation on how to configure is TODO.
-
 ## Data Workflow
 
-**[Create Related Data](./docs/Related%20Data.md)**
+**[Create Assembly From Part](./docs/Assembly%20From.md)**
 
-Essential for Teams working in multiple disciplines allowing users to create  related documents (as an Assembly) to contain different discipline work, like CAM or Simulation. The Assembly document is copied from a cloud project/folder allowing for the new documents to have already saved information to automate workflows.
+Create a new assembly with the active design document inserted as the first component.
 
 **[New Document](./docs/New%20Document.md)**
 
@@ -22,7 +18,7 @@ Adds a QAT (Quick Access Toolbar) command to open a pallet to create new documen
 
 **[Document References](./docs/Document%20References.md)**
 
-Display a dialog with detailed information on the active documents references. Useful to use standalone and more so with the [Related Data](/docs/Related%20Data.md) tool.
+Display a dialog with detailed information on the active documents references.
 
 **[Reference Manager](./docs/Reference%20Manager.md)**
 
@@ -56,10 +52,6 @@ Provide Cloud Data information on the active document. Reports on Hub, Project a
 
 Show the history of the active document.
 
-**[Feature Compute to CSV](./docs/Timeline%20Compute%20Times.md)**
-
-Export the active document's timeline feature compute times to a CSV file in a directory of your choosing. Features are sorted by compute time.
-
 ---
 
 ## UI Tweaks
@@ -80,42 +72,7 @@ This creates an entry in the file menu to manually save a local recovery save.
 
 Browse the local device and insert a STEP file into the active document.
 
-**[Sketch Repair](./docs/SketchFix.md)**
-
-Find and repair common sketch profile issues.
-
-**[Sketch Under-Constrained](./docs/SketchUnder.md)**
-
-Highlight under-constrained sketch entities.
 
 **[Share Menu](./docs/Share%20Menu.md)**
 
 Quickly share the active document and control share settings.
-
----
-
-## Export Document information
-
-**[Export BOM](./docs/Export%20BOM.md)**
-
-Export the active document's component information as a CSV file.
-
-**[Export Graphviz](./docs/Export%20Graphviz.md)**
-
-Export the active document's component relationships as a Graphviz DOT file.
-
-**[Export Mermaid](./docs/Export%20Mermaid.md)**
-
-Export the active document's component relationships as a mermaid flowchart md file.
-
----
-
-## Tools to automate special tasks
-
-**[Make Project Default Folders](./docs/Default%20Folders.md)**
-
-Creates default folders in the active project if they do not already exist.
-
-**[Install a dedicated Assembly Tab](./docs/Install%20Assembly%20Tab.md)**
-
-Installs a new Assembly tab in the Fusion design toolbar. Restructures toolbar for better design workflows.
