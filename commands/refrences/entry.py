@@ -143,7 +143,7 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
             ]
 
         # Links String to report references
-        links = f"<h1>Source document: {html.escape(doc.name)}</h1>"
+        links = f"<h2>Source document: {html.escape(doc.name)}</h2>"
         links += f"<h3>Parents ({len(docParents)}):</h3>"
 
         if docParents:
@@ -171,7 +171,7 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
         relationshipCount = len(docParents) + len(docChildren) + len(docDrawings)
         relationsTitle = f"References ({relationshipCount})"
 
-        ui.messageBox(links, relationsTitle)
+        ui.messageBox(links, relationsTitle, 0, 2)
 
     except:
         if ui:
