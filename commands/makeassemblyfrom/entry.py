@@ -34,9 +34,9 @@ def start():
     # Get the drop-down that contains the file related commands.
     fileDropDown = qat.controls.itemById("FileSubMenuCommand")
 
-    # Add a new button after the Export control.
+    # Add file menu entry after new drawing template command.
     control = fileDropDown.controls.addCommand(
-        cmd_def, "PLM360SaveAsLatestOnQATCommand", False
+        cmd_def, "NewFusionDrawingTemplateCommand", True
     )
 
 
