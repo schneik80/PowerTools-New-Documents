@@ -26,7 +26,15 @@ _navBarBtnName = "NavBarBtn"
 _toolbar = "NavToolbar"
 
 # Resource location for command icons, here we assume a sub folder in this directory named "resources".
-ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
+Theme = app.preferences.generalPreferences.userInterfaceTheme
+if Theme == 0:
+    ICON_FOLDER = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "resources", ""
+    )
+else:
+    ICON_FOLDER = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "resources/dark", ""
+    )
 
 # Holds references to event handlers
 local_handlers = []
