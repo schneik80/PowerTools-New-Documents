@@ -81,7 +81,7 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
     try:
         app = adsk.core.Application.get()
         ui = app.userInterface
-
+        product = app.activeProduct
         design = adsk.fusion.Design.cast(product)
         if not design:
             ui.messageBox("No active Fusion design", "No Design")

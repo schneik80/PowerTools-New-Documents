@@ -80,10 +80,6 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
         product = app.activeProduct
         design = adsk.fusion.Design.cast(product)
         docActive = app.activeDocument
-        docActiveUnits = design.unitsManager.defaultLengthUnits
-
-        app_path = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
-        importManager = app.importManager
 
         # Check a Design document is active.
         if not design:
@@ -93,6 +89,10 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
         # Check that the active document has been saved.
         if futil.isSaved() == False:
             return
+
+        docActiveUnits = design.unitsManager.defaultLengthUnits
+        app_path = pathlib.Path(os.path.dirname(os.path.abspath(__file__)))
+        importManager = app.importManager
 
         if docActiveUnits == "mm" or "cm" or "m":
             parentdoc = os.path.normpath(
