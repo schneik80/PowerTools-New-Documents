@@ -31,6 +31,7 @@ ui = app.userInterface
 
 # Resource location for command icons, here we assume a sub folder in this directory named "resources".
 Theme = app.preferences.generalPreferences.userInterfaceTheme
+
 if Theme == 2:
     HTML_PAGE = "index-d.html"
 else:
