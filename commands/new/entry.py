@@ -124,7 +124,7 @@ def start():
     futil.add_handler(app.documentOpened, get_type)
     futil.add_handler(app.documentActivated, get_type)
     futil.add_handler(app.documentCreated, get_type)
-    futil.add_handler(app., get_type)
+    # futil.add_handler(app., get_type)
 
 
 # Executed when add-in is stopped.
@@ -246,6 +246,106 @@ def get_type(args):
                     tabs = design_workspace.toolbarTabs.itemById(i)
                     if tabs:
                         tabs.isVisible = False
+            except:
+                futil.log(f"{CMD_NAME}: failed to get attribute")
+
+        if attribute.value == "sheetmetal":
+            try:
+
+                design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+                alltbs = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in alltbs:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = True
+
+                smttb = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in smttb:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = False
+            except:
+                futil.log(f"{CMD_NAME}: failed to get attribute")
+
+        if attribute.value == "plastic":
+            try:
+
+                design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+                alltbs = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in alltbs:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = True
+
+                smttb = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in smttb:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = False
+            except:
+                futil.log(f"{CMD_NAME}: failed to get attribute")
+
+        if attribute.value == "direct" or "legacy":
+            try:
+
+                design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+                alltbs = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in alltbs:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = True
+
             except:
                 futil.log(f"{CMD_NAME}: failed to get attribute")
 
