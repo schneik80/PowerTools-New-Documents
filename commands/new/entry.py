@@ -65,6 +65,10 @@ newDocsDict = {
         "mm-Assembly",
         os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Assembly.f3d")),
     ],
+    "mm-Legacy": [
+        "mm-Assembly",
+        os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Legacy.f3d")),
+    ],
     "mm-Part": [
         "mm-Part",
         os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Part.f3d")),
@@ -84,6 +88,10 @@ newDocsDict = {
     "in-Assembly": [
         "in-Assembly",
         os.path.normpath(os.path.join(app_path, "resources/docs/in/in-Assembly.f3d")),
+    ],
+    "in-Legacy": [
+        "in-Assembly",
+        os.path.normpath(os.path.join(app_path, "resources/docs/in/in-Legacy.f3d")),
     ],
     "in-Part": [
         "in-Part",
@@ -173,9 +181,36 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
 def get_type(args):
     design = adsk.fusion.Design.cast(app.activeProduct)
+
     attributes = design.findAttributes("litetype", "componenttype")
+
+    if not attributes:
+        try:
+
+            design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+            alltbs = [
+                "ASMTab",
+                "SolidTab",
+                "SurfaceTab",
+                "SheetMetalTab",
+                "ParaMeshOuterTab",
+                "PlasticTab",
+                "ManageTab",
+                "PCBsTab",
+            ]
+
+            for i in alltbs:
+                tabs = design_workspace.toolbarTabs.itemById(i)
+                if tabs:
+                    tabs.isVisible = True
+
+        except:
+            futil.log(f"{CMD_NAME}: failed to get attribute")
+
     for attribute in attributes:
         futil.log(f"{CMD_NAME}: {attribute.name} = {attribute.value}")
+
         if attribute.value == "assembly":
             try:
                 design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
@@ -325,7 +360,7 @@ def get_type(args):
             except:
                 futil.log(f"{CMD_NAME}: failed to get attribute")
 
-        if attribute.value == "direct" or "legacy":
+        if attribute.value == "direct" or attribute.value == "legacy":
             try:
 
                 design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
