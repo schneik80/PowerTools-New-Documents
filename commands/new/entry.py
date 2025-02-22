@@ -61,6 +61,10 @@ app_path = os.path.dirname(os.path.abspath(__file__))
 
 # get the pictionary for new document types. Ensure HTML file has the same keys
 newDocsDict = {
+    "mm-Assembly": [
+        "mm-Assembly",
+        os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Assembly.f3d")),
+    ],
     "mm-Part": [
         "mm-Part",
         os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Part.f3d")),
@@ -76,6 +80,10 @@ newDocsDict = {
     "mm-Direct": [
         "mm-Direct",
         os.path.normpath(os.path.join(app_path, "resources/docs/mm/mm-Direct.f3d")),
+    ],
+    "in-Assembly": [
+        "in-Assembly",
+        os.path.normpath(os.path.join(app_path, "resources/docs/in/in-Assembly.f3d")),
     ],
     "in-Part": [
         "in-Part",
@@ -112,6 +120,11 @@ def start():
 
     # Create the command control, i.e. a button in the UI.
     control = qat.controls.addCommand(cmd_def, "FileSubMenuCommand", False)
+
+    futil.add_handler(app.documentOpened, get_type)
+    futil.add_handler(app.documentActivated, get_type)
+    futil.add_handler(app.documentCreated, get_type)
+    futil.add_handler(app., get_type)
 
 
 # Executed when add-in is stopped.
@@ -156,6 +169,87 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     futil.add_handler(
         args.command.destroy, command_destroy, local_handlers=local_handlers
     )
+
+
+def get_type(args):
+    design = adsk.fusion.Design.cast(app.activeProduct)
+    attributes = design.findAttributes("litetype", "componenttype")
+    for attribute in attributes:
+        futil.log(f"{CMD_NAME}: {attribute.name} = {attribute.value}")
+        if attribute.value == "assembly":
+            try:
+                design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+                alltbs = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in alltbs:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = True
+
+                asmtb = [
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in asmtb:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = False
+            except:
+                futil.log(f"{CMD_NAME}: failed to get attribute")
+
+        if attribute.value == "part":
+            try:
+                design_workspace = ui.workspaces.itemById("FusionSolidEnvironment")
+
+                alltbs = [
+                    "ASMTab",
+                    "SolidTab",
+                    "SurfaceTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in alltbs:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = True
+
+                prttb = [
+                    "ASMTab",
+                    "SheetMetalTab",
+                    "ParaMeshOuterTab",
+                    "PlasticTab",
+                    "ManageTab",
+                    "PCBsTab",
+                ]
+
+                for i in prttb:
+                    tabs = design_workspace.toolbarTabs.itemById(i)
+                    if tabs:
+                        tabs.isVisible = False
+            except:
+                futil.log(f"{CMD_NAME}: failed to get attribute")
+
+    futil.log(f"{CMD_NAME}: ===== {app.activeDocument.name}Doc opened. =====")
 
 
 # Because no command inputs are being added in the command created event, the execute
