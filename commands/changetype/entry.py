@@ -5,6 +5,8 @@ from ... import config
 
 app = adsk.core.Application.get()
 ui = app.userInterface
+startType = "None"
+
 myTypesDict = []
 
 myTypesDict = [
@@ -97,24 +99,31 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     # TODO Define the dialog for your command by adding different inputs to the command.
 
     # Create a simple text box input.
-
+    attributes = None
     attributes = design.findAttributes("litetype", "componenttype")
     try:
         for attribute in attributes:
             if attribute.value == "assembly":
+                startType = "Assembly"
                 myTypesDict[1]["isactive"] = "true"
             if attribute.value == "concept":
+                startType = "Concept"
                 myTypesDict[2]["isactive"] = "true"
             if attribute.value == "part":
+                startType = "Part"
                 myTypesDict[3]["isactive"] = "true"
             if attribute.value == "sheetmetal":
+                startType = "Sheetmetal"
                 myTypesDict[4]["isactive"] = "true"
             if attribute.value == "plastic":
+                startType = "Plastic"
                 myTypesDict[5]["isactive"] = "true"
             if attribute.value == "direct":
+                startType = "Direct"
                 myTypesDict[6]["isactive"] = "true"
     except:
         myTypesDict[0]["isactive"] = "true"
+        startType = "None"
 
     drop_down_style = adsk.core.DropDownStyles.LabeledIconDropDownStyle
     drop_down_input = inputs.addDropDownCommandInput("Type", "Type:", drop_down_style)
@@ -207,11 +216,6 @@ def command_validate_input(args: adsk.core.ValidateInputsEventArgs):
     inputs = args.inputs
 
     # Verify the validity of the input values. This controls if the OK button is enabled or not.
-    valueInput = inputs.itemById("value_input")
-    if valueInput.value >= 0:
-        args.areInputsValid = True
-    else:
-        args.areInputsValid = False
 
 
 # This event handler is called when the command terminates.
