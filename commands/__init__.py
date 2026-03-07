@@ -3,6 +3,7 @@ from .datatoggle import entry as datatoggle
 from .dochistory import entry as dochistory
 from .docinfo import entry as docinfo
 from .new import entry as new
+from .set_location import entry as set_location
 
 # Fusion will automatically call the start() and stop() functions.
 commands = [
@@ -11,6 +12,7 @@ commands = [
     dochistory,
     docinfo,
     new,
+    set_location,
 ]
 
 
