@@ -2,14 +2,6 @@
 
 Make working as a team, cloud data, and with assemblies more productive.
 
-## Data Workflow
-
-**[New Document](./docs/New%20Document.md)**
-
-Adds a QAT (Quick Access Toolbar) command to open a pallet to create new documents. Documents are auto-named and saved to the active project folder in Team.
-
----
-
 ## Information tools
 
 **[Document Information](./docs/Document%20Information.md)**
