@@ -2,9 +2,10 @@ from .autosave import entry as autosave
 from .datatoggle import entry as datatoggle
 from .dochistory import entry as dochistory
 from .docinfo import entry as docinfo
+from .docopen import entry as docopen
 
 # Fusion will automatically call the start() and stop() functions.
-commands = [autosave, datatoggle, dochistory, docinfo]
+commands = [autosave, datatoggle, dochistory, docinfo, docopen]
 
 
 # Assumes you defined a "start" function in each of your modules.

@@ -23,3 +23,11 @@ Toggling the data pane is buried three level menu or a keyboard shortcut. This a
 **[Recovery Save](./docs/Recovery%20Save.md)**
 
 This creates an entry in the file menu to manually save a local recovery save.
+
+---
+
+## Automation
+
+**[Show In Location](./docs/Show%20In%20Location.md)**
+
+Automatically runs Fusion's built-in Show In Location command whenever a Fusion design document is opened or you switch document tabs, keeping the Data Panel in sync with the active document at all times.
