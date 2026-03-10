@@ -1,10 +1,9 @@
-import adsk.core, adsk.fusion
+import adsk.core
 from ...lib import fusionAddInUtils as futil
 
 app = adsk.core.Application.get()
 
 CMD_NAME = "Show In Location on Open"
-SHOW_IN_LOCATION_CMD_ID = "ShowInLocationCmd"
 
 # Local list of event handlers used to maintain a reference so
 # they are not released and garbage collected.
@@ -33,44 +32,40 @@ def stop():
     futil.log(f"{CMD_NAME}: documentOpened and documentActivated handlers removed.")
 
 
-def _show_in_location(event_name: str):
-    """Select the root component and run ShowInLocationCmd. Logs silently on failure."""
+def _show_in_location(event_name: str, doc: adsk.core.Document):
+    """Get the URN from the event document and run Dashboard.ShowInLocation via executeTextCommand."""
+    urn = None
     try:
-        ui = app.userInterface
-        product = app.activeProduct
-        design = adsk.fusion.Design.cast(product)
-        if not design:
-            futil.log(f"{CMD_NAME} [{event_name}]: no active Fusion design, skipping.")
+        if not doc:
+            futil.log(f"{CMD_NAME} [{event_name}]: no active document, skipping.")
             return
 
-        # Select the root component so ShowInLocationCmd has the right context.
-        root = design.rootComponent
-        design.activateRootComponent()
-        ui.activeSelections.clear()
-        ui.activeSelections.add(root)
+        data_file = doc.dataFile
+        if not data_file:
+            futil.log(
+                f"{CMD_NAME} [{event_name}]: document has no dataFile (unsaved?), skipping."
+            )
+            return
 
-        cmd_def = ui.commandDefinitions.itemById(SHOW_IN_LOCATION_CMD_ID)
-        if cmd_def:
-            cmd_def.execute()
-            futil.log(
-                f"{CMD_NAME} [{event_name}]: executed '{SHOW_IN_LOCATION_CMD_ID}'."
-            )
-        else:
-            futil.log(
-                f"{CMD_NAME} [{event_name}]: command '{SHOW_IN_LOCATION_CMD_ID}' not found."
-            )
+        urn = data_file.id
+        app.executeTextCommand(f"Dashboard.ShowInLocation {urn}")
+        futil.log(
+            f"{CMD_NAME} [{event_name}]: executed 'Dashboard.ShowInLocation {urn}'."
+        )
     except Exception:
         futil.log(
-            f"{CMD_NAME} [{event_name}]: error executing '{SHOW_IN_LOCATION_CMD_ID}'.",
+            f"{CMD_NAME} [{event_name}]: error executing 'Dashboard.ShowInLocation'.",
             force_console=True,
         )
+    finally:
+        urn = None
 
 
 # Event handler — fires at the end of every document open.
 def application_documentOpened(args: adsk.core.DocumentEventArgs):
-    _show_in_location("documentOpened")
+    _show_in_location("documentOpened", args.document)
 
 
 # Event handler — fires when the user switches to a different document tab.
 def application_documentActivated(args: adsk.core.DocumentEventArgs):
-    _show_in_location("documentActivated")
+    _show_in_location("documentActivated", args.document)
