@@ -1,10 +1,11 @@
 from .autosave import entry as autosave
 from .datatoggle import entry as datatoggle
+from .defaultfolders import entry as defaultfolders
 from .dochistory import entry as dochistory
 from .docinfo import entry as docinfo
 
 # Fusion will automatically call the start() and stop() functions.
-commands = [autosave, datatoggle, dochistory, docinfo]
+commands = [autosave, datatoggle, defaultfolders, dochistory, docinfo]
 
 
 # Assumes you defined a "start" function in each of your modules.
