@@ -1,4 +1,4 @@
-# PowerTools New Documents tools for Fusion v1.0
+# PowerTools New Documents tools for Fusion
 
 Make working as a team, cloud data, and with assemblies more productive.
 
