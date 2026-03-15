@@ -1,6 +1,6 @@
 # Document History
 
-[Back to Readme](../README.md)
+[Back to README](../README.md)
 
 ## Overview
 
@@ -71,6 +71,6 @@ C4Component
 
 ---
 
-[Back to Readme](../README.md)
+[Back to README](../README.md)
 
-IMA LLC Copyright
+*Copyright © 2026 IMA LLC. All rights reserved.*

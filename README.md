@@ -1,6 +1,25 @@
-# PowerTools: New Documents for Fusion
+# PowerTools: New Documents for Autodesk Fusion
 
-PowerTools New Documents is a Fusion add-in that improves productivity when working with cloud data, team projects, and multi-document assemblies. It adds commands that surface actions that are otherwise buried in menus or difficult to discover.
+PowerTools New Documents is an Autodesk Fusion add-in that improves productivity when working with cloud data, team projects, and multi-document assemblies. It adds commands that surface actions that are otherwise buried in menus or difficult to discover.
+
+## Prerequisites
+
+Before you install and run this add-in, confirm that you have the following:
+
+- **Autodesk Fusion** (any current subscription tier) with Python add-in support enabled
+- **Windows 10/11** or **macOS**
+- An **Autodesk Team Hub** (required for commands that access cloud project and folder data)
+
+## Installation
+
+1. Download or clone this repository to your local machine.
+2. In Autodesk Fusion, open the **Add-Ins** dialog by selecting **Utilities** > **Add-Ins**, or press **Shift+S**.
+3. On the **Add-Ins** tab, click the green **+** icon.
+4. Navigate to the folder where you placed the add-in files and select the `PowerTools-New-Documents` folder.
+5. Click **Open**.
+6. Select **PowerTools New Documents** in the list, then click **Run**.
+
+To have the add-in load automatically each time Fusion starts, select **Run on Startup** before clicking **Run**.
 
 ## Commands
 
@@ -75,4 +94,16 @@ C4Context
 
 ---
 
-IMA LLC Copyright
+## Support
+
+This add-in is developed and maintained by IMA LLC.
+
+---
+
+## License
+
+This project is released under the [MIT License](LICENSE).
+
+---
+
+*Copyright © 2026 IMA LLC. All rights reserved.*
