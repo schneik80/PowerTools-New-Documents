@@ -6,11 +6,7 @@ from .docinfo import entry as docinfo
 from .docopen import entry as docopen
 
 # Fusion will automatically call the start() and stop() functions.
-<<<<<<< HEAD
-commands = [autosave, datatoggle, defaultfolders, dochistory, docinfo]
-=======
-commands = [autosave, datatoggle, dochistory, docinfo, docopen]
->>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
+commands = [autosave, datatoggle, defaultfolders, dochistory, docinfo, docopen]
 
 
 # Assumes you defined a "start" function in each of your modules.
