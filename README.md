@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # PowerTools: New Documents for Fusion
+=======
+# PowerTools New Documents tools for Fusion
+>>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
 
 PowerTools New Documents is a Fusion add-in that improves productivity when working with cloud data, team projects, and multi-document assemblies. It adds commands that surface actions that are otherwise buried in menus or difficult to discover.
 
@@ -6,13 +10,21 @@ PowerTools New Documents is a Fusion add-in that improves productivity when work
 
 ### Information tools
 
+<<<<<<< HEAD
 #### [Document Information](./docs/Document%20Information.md)
+=======
+Provide Cloud Data information on the active document. Reports on Hub, Project, and Folder location including Fusion Manufacturing Cloud Data model unique identifiers.
+>>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
 
 Displays cloud data identifiers and metadata for the active design document, including hub, project, folder, and document IDs, version history, and schema migration warnings. Useful for troubleshooting data management issues and sharing document references with collaborators.
 
+<<<<<<< HEAD
 #### [Document History](./docs/Document%20History.md)
 
 Adds a **History** button to the Quick Access Toolbar that opens the active document's history panel directly, without requiring a right-click on the browser root.
+=======
+Show the history of the active document from QAT.
+>>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
 
 ---
 
@@ -20,10 +32,15 @@ Adds a **History** button to the Quick Access Toolbar that opens the active docu
 
 #### [Add Default Project Folders](./docs/Default%20Folders.md)
 
+<<<<<<< HEAD
 Creates a predefined set of folders in the root of the active Fusion project. Skips any folders that already exist so the command is safe to run on existing projects. Supports two configurable folder sets.
+=======
+Toggling the data pane is buried three levels in a menu or a keyboard shortcut. This adds a button to the navbar to make toggling easier.
+>>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
 
 ---
 
+<<<<<<< HEAD
 ### UI tools
 
 #### [Toggle Data Pane](./docs/Toggle%20Data%20Pane.md)
@@ -67,3 +84,14 @@ C4Context
 ---
 
 IMA LLC Copyright
+=======
+This tool creates an entry in the file menu to manually save a local recovery save.
+
+---
+
+## Automation
+
+**[Show In Location](./docs/Show%20In%20Location.md)**
+
+Automatically runs Fusion's built-in Show In Location command whenever a Fusion design document is opened or you switch document tabs, keeping the Data Panel in sync with the active document at all times.
+>>>>>>> bddb54d41c23155bef19e8963c111f07396a0df6
