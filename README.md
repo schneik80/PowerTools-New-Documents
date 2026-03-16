@@ -1,6 +1,6 @@
 # PowerTools: Document Tools for Autodesk Fusion
 
-PowerTools New Documents is an Autodesk Fusion add-in that improves productivity when working with cloud data, team projects, and multi-document assemblies. It adds commands that surface actions that are otherwise buried in menus or difficult to discover.
+PowerTools Document Tools is an Autodesk Fusion add-in that improves productivity when working with cloud data, team projects, and multi-document assemblies. It adds commands that surface actions that are otherwise buried in menus or difficult to discover.
 
 ## Prerequisites
 
