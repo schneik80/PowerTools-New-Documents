@@ -14,12 +14,13 @@ This command enforces a consistent folder structure across projects without requ
 |---|---|
 | Create default project folders | Adds missing folders to the root of the active Fusion project |
 | Skip existing folders | Detects existing folders by case-insensitive name comparison and skips them |
-| Support two folder sets | Two predefined sets are available, selected by the `folderSet` variable in `entry.py` |
+| Choose folder set interactively | A **Folder set** dropdown in the command dialog lets the user choose between **Basic** and **Advanced** |
+| Live folder preview | The dialog shows a live preview of each folder in the selected set; folders that already exist in the project are marked `(exists)` and will be skipped |
 | Idempotent operation | Running the command multiple times on the same project produces no duplicate folders |
 
 ## Folder sets
 
-### Set 1 (default)
+### Basic
 
 | Folder name |
 |---|
@@ -27,7 +28,7 @@ This command enforces a consistent folder structure across projects without requ
 | Archive |
 | Obit |
 
-### Set 2
+### Advanced
 
 | Folder name |
 |---|
@@ -43,8 +44,6 @@ This command enforces a consistent folder structure across projects without requ
 | 09 - Manufacture |
 | 10 - Archive |
 | XX - Obit |
-
-To switch between sets, set the `folderSet` variable at the top of `commands/defaultfolders/entry.py` to `1` or `2`.
 
 ## Prerequisites
 
@@ -67,10 +66,11 @@ The Add Default Project Folders command registers a button in the QAT File dropd
 
 1. The add-in registers the command definition and appends a button to the QAT File dropdown.
 2. The user selects **Add Default Project Folders**.
-3. The `command_execute` handler retrieves `app.data.activeProject.rootFolder.dataFolders`.
-4. The handler builds a lowercase list of existing folder names for case-insensitive comparison.
-5. Based on the `folderSet` value, the handler iterates through the corresponding folder name list.
-6. For each folder name not found in the lowercase list, `dataFolders.add(name)` is called.
+3. A command dialog opens with a **Folder set** dropdown (defaulting to **Basic**) and a read-only **Folders to create** preview.
+4. The preview lists every folder in the selected set; folders already present in the project root are shown as `(exists)`.
+5. Switching the dropdown immediately refreshes the preview via the `inputChanged` event.
+6. The user confirms with **OK**.
+7. The `command_execute` handler reads the dropdown selection, retrieves `app.data.activeProject.rootFolder.dataFolders`, and calls `dataFolders.add(name)` only for folder names that are not already present (case-insensitive).
 
 ### Component diagram
 
