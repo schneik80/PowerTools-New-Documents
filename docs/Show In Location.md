@@ -4,53 +4,48 @@
 
 ## Overview
 
-By default, the Fusion Data Panel does not update when you open a document or switch between document tabs. You must manually locate the active document in the Data Panel to see where it lives in your project hierarchy. The **Show In Location** feature removes this friction by automatically scrolling the Data Panel to reveal the active document whenever a design is opened or activated.
+By default in Fusion, the Data Panel does not always track the document currently in focus. The **Show In Location** automation runs Fusion's built-in **Show In Location** text command whenever a document opens or when you switch to a different open document tab.
 
-This feature runs silently in the background with no button, dialog, or user interaction required.
+This keeps the Data Panel synchronized with the active document without any manual action.
 
 ## Capabilities
 
 | Capability | Details |
 |---|---|
-| Sync Data Panel on document open | Automatically reveals the opened document in the Data Panel when a design finishes loading |
-| Sync Data Panel on tab switch | Automatically reveals the active document in the Data Panel when you switch between open document tabs |
-| Silently ignore non-design documents | Drawings and other non-design document types are skipped without any error or notification |
-| Silently handle unsaved documents | Documents that have not been saved to the cloud (no `dataFile`) are skipped without interrupting your workflow |
-| Error isolation | Any unexpected errors are logged to the Fusion add-in log and do not surface to the user |
+| Automatic document tracking | Runs in the background with no button or dialog |
+| Open-event sync | Triggers after each `documentOpened` event |
+| Tab-switch sync | Triggers after each `documentActivated` event |
+| Safe fallback behavior | Skips unsaved documents and logs errors without interrupting workflow |
 
 ## Prerequisites
 
-- The PowerTools add-in must be active.
-- Documents must be saved to Fusion's cloud data to be located. Unsaved documents are silently skipped.
+- The add-in must be loaded.
+- The active document must be saved to Fusion cloud data to provide a valid `dataFile.id` URN.
+
+## Notes
+
+- This feature is event-driven and does not create a toolbar button or dialog.
+- Unsaved documents are skipped because they do not expose a valid cloud `dataFile` reference.
 
 ## Access
 
-Show In Location runs automatically. No user action is required. It is active as long as the PowerTools add-in is loaded.
+This feature runs automatically in the background whenever the add-in is loaded. No user interaction is required.
 
 ## Architecture
 
-Unlike other PowerTools commands, Show In Location does not register a UI control. Instead, its `start()` function subscribes to two application-level Fusion events: `documentOpened` and `documentActivated`. Both events share a single internal handler that resolves the document's cloud URN from `dataFile.id` and passes it to Fusion's `Dashboard.ShowInLocation` text command.
+The Show In Location automation registers application-level event handlers on startup for `documentOpened` and `documentActivated`. Each event passes the event document to a shared helper that resolves the document URN and executes `Dashboard.ShowInLocation <urn>` through `app.executeTextCommand`.
 
-### Module
+### Command ID
 
-`commands/docopen/entry.py`
-
-### Trigger events
-
-| Event | When it fires |
-|---|---|
-| `app.documentOpened` | After any document finishes loading |
-| `app.documentActivated` | When the user switches to a different open document tab |
+N/A (event-driven automation with no UI command definition)
 
 ### Execution flow
 
-1. During add-in startup, `start()` registers handlers for `app.documentOpened` and `app.documentActivated`.
-2. Either event fires with an `adsk.core.DocumentEventArgs` argument containing the relevant document.
-3. The shared `_show_in_location()` helper checks that the document and its `dataFile` are not `None`. If either is missing, the event is logged and skipped.
-4. The document's cloud identifier is read from `dataFile.id` (a Fusion URN string).
-5. `app.executeTextCommand("Dashboard.ShowInLocation <urn>")` is called, which scrolls the Data Panel to reveal the document.
-6. Any exception is caught, logged, and suppressed so that the user's workflow is never interrupted.
-7. During add-in shutdown, `stop()` clears `local_handlers`, which releases the event handler references and unsubscribes both events.
+1. The add-in starts and registers handlers for `app.documentOpened` and `app.documentActivated`.
+2. The user opens a document or activates a different document tab.
+3. The handler validates that the event includes a document and a cloud `dataFile`.
+4. The helper reads `doc.dataFile.id` and executes `Dashboard.ShowInLocation <urn>`.
+5. The Data Panel selection updates to the current document location.
 
 ### Component diagram
 
@@ -58,18 +53,17 @@ Unlike other PowerTools commands, Show In Location does not register a UI contro
 C4Component
     title Show In Location – Component Architecture
 
-    Person(user, "Designer", "Fusion user opening or switching between design documents")
-    Component(addin, "PowerTools Add-In", "Python, Fusion API", "Hosts and registers all PowerTools commands")
-    Component(cmd, "Show In Location", "docopen/entry.py", "Subscribes to documentOpened and documentActivated events and resolves the document URN")
-    Component(fusionApp, "app.documentOpened / documentActivated", "Fusion Application Events", "Fire when a document is opened or the active tab changes")
-    Component(textCmd, "Dashboard.ShowInLocation", "Fusion Text Command API", "Scrolls the Data Panel to reveal the document matching the provided URN")
-    Component(dataFile, "doc.dataFile", "Fusion Data API", "Provides the cloud URN (id) for a saved document")
+    Person(user, "Designer", "Fusion user switching documents")
+    Component(addin, "PowerTools Add-In", "Python, Fusion API", "Registers and hosts automation handlers")
+    Component(events, "documentOpened/documentActivated", "Fusion Application Events", "Signals document open and tab activation")
+    Component(cmd, "Show In Location Automation", "docopen/entry.py", "Resolves document URN and executes text command")
+    Component(fusion, "Dashboard.ShowInLocation", "Fusion Internal Command", "Navigates Data Panel to document location")
 
     Rel(user, addin, "Loads add-in on Fusion start")
-    Rel(addin, cmd, "Calls start() – subscribes to documentOpened and documentActivated")
-    Rel(fusionApp, cmd, "Fires on document open or tab switch")
-    Rel(cmd, dataFile, "Reads dataFile.id to get document URN")
-    Rel(cmd, textCmd, "Executes Dashboard.ShowInLocation with document URN")
+    Rel(user, events, "Opens or switches documents")
+    Rel(addin, events, "Subscribes to application document events")
+    Rel(events, cmd, "Passes event document")
+    Rel(cmd, fusion, "Executes Dashboard.ShowInLocation <urn>")
 ```
 
 ---

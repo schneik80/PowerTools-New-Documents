@@ -1,12 +1,12 @@
-# Recovery Save
+# Local Recovery Save
 
 [Back to README](../README.md)
 
 ## Overview
 
-The **Recovery Save** command adds a **Recovery Save** entry to the Fusion File dropdown on the Quick Access Toolbar (QAT). When you select it, Fusion writes a local recovery checkpoint for the active document to disk without creating a new cloud version. This protects work in progress between formal saves.
+The **Local Recovery Save** command adds a **Local Recovery Save** entry to the Fusion File dropdown on the Quick Access Toolbar (QAT). When you select it, Fusion writes a local recovery checkpoint for the active document to disk without creating a new cloud version. This protects work in progress between formal saves.
 
-In team environments, each cloud save can trigger out-of-date notifications for collaborators. Recovery Save lets you checkpoint local work frequently without generating that version noise.
+In team environments, each cloud save can trigger out-of-date notifications for collaborators. Local Recovery Save lets you checkpoint local work frequently without generating that version noise.
 
 ## Capabilities
 
@@ -20,15 +20,20 @@ In team environments, each cloud save can trigger out-of-date notifications for 
 
 - A Fusion design document must be open and active.
 
+## Notes
+
+- This command delegates directly to Fusion's internal `AutoSaveFilesCommand`.
+- It creates a local recovery checkpoint without creating a new cloud version.
+
 ## Access
 
-Select **Recovery Save** from the **File** dropdown on the **Quick Access Toolbar (QAT)**.
+Select **Local Recovery Save** from the **File** dropdown on the **Quick Access Toolbar (QAT)**.
 
 ![access](/docs/assets/recoverysave.png)
 
 ## Architecture
 
-The Recovery Save command is a thin wrapper around Fusion's built-in `AutoSaveFilesCommand`. It registers a button control in the QAT File dropdown during add-in startup and delegates execution directly to the internal Fusion command on click.
+The Local Recovery Save command is a thin wrapper around Fusion's built-in `AutoSaveFilesCommand`. It registers a button control in the QAT File dropdown during add-in startup and delegates execution directly to the internal Fusion command on click.
 
 ### Command ID
 
@@ -37,7 +42,7 @@ The Recovery Save command is a thin wrapper around Fusion's built-in `AutoSaveFi
 ### Execution flow
 
 1. The add-in registers the command definition and inserts a button after the **Save as Latest** control in the QAT File dropdown.
-2. The user selects **Recovery Save**.
+2. The user selects **Local Recovery Save**.
 3. The `command_execute` handler retrieves the internal `AutoSaveFilesCommand` command definition from the Fusion UI.
 4. `AutoSaveFilesCommand` is executed, writing the local recovery checkpoint.
 
@@ -45,16 +50,16 @@ The Recovery Save command is a thin wrapper around Fusion's built-in `AutoSaveFi
 
 ```mermaid
 C4Component
-    title Recovery Save – Component Architecture
+    title Local Recovery Save – Component Architecture
 
     Person(user, "Designer", "Fusion user working on a design")
     Component(addin, "PowerTools Add-In", "Python, Fusion API", "Hosts and registers all PowerTools commands")
-    Component(cmd, "Recovery Save", "autosave/entry.py", "Registers QAT button control and delegates to Fusion on execute")
+    Component(cmd, "Local Recovery Save", "autosave/entry.py", "Registers QAT button control and delegates to Fusion on execute")
     Component(fusion, "AutoSaveFilesCommand", "Fusion Internal API", "Writes local recovery checkpoint to disk")
 
     Rel(user, addin, "Loads add-in on Fusion start")
     Rel(addin, cmd, "Calls start() – registers button in QAT File dropdown")
-    Rel(user, cmd, "Clicks Recovery Save in QAT File menu")
+    Rel(user, cmd, "Clicks Local Recovery Save in QAT File menu")
     Rel(cmd, fusion, "Executes AutoSaveFilesCommand")
 ```
 

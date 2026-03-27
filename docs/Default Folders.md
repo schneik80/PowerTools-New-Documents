@@ -1,10 +1,10 @@
-# PowerTools Add Project Folders
+# Add Default Project Folders
 
 [Back to README](../README.md)
 
 ## Overview
 
-The **PowerTools Add Project Folders** command creates a predefined set of folders in the root of the active Fusion project if those folders do not already exist. Running the command on a project that already has some or all of the default folders is safe—existing folders are detected by a case-insensitive name match and are not duplicated.
+The **Add Default Project Folders** command creates a predefined set of folders in the root of the active Fusion project if those folders do not already exist. Running the command on a project that already has some or all of the default folders is safe. Existing folders are detected by a case-insensitive name match and are not duplicated.
 
 This command enforces a consistent folder structure across projects without requiring each team member to create folders manually.
 
@@ -50,13 +50,21 @@ This command enforces a consistent folder structure across projects without requ
 - A Fusion project must be active (a document does not need to be open).
 - The add-in must have write access to the active project.
 
+## Notes
+
+- Existing folders are matched case-insensitively and skipped.
+- The preview marks existing folders as `(exists)` before execution.
+- The command is safe to run repeatedly on the same project.
+
 ## Access
 
 Select **PowerTools Add Project Folders** from the **File** dropdown on the **Quick Access Toolbar (QAT)**.
 
+UI label note: the command is documented as **Add Default Project Folders** and appears in Fusion as **PowerTools Add Project Folders**.
+
 ## Architecture
 
-The PowerTools Add Project Folders command registers a button in the QAT File dropdown. On execute, it retrieves the root folder of the active project, reads all existing folder names into a lowercase list, and then iterates through the selected folder set, calling `dataFolders.add()` only for names that are not already present.
+The Add Default Project Folders command registers a button in the QAT File dropdown. On execute, it retrieves the root folder of the active project, reads all existing folder names into a lowercase list, and then iterates through the selected folder set, calling `dataFolders.add()` only for names that are not already present.
 
 ### Command ID
 
@@ -76,7 +84,7 @@ The PowerTools Add Project Folders command registers a button in the QAT File dr
 
 ```mermaid
 C4Component
-    title PowerTools Add Project Folders – Component Architecture
+    title Add Default Project Folders – Component Architecture
 
     Person(user, "Designer", "Fusion user managing a project")
     Component(addin, "PowerTools Add-In", "Python, Fusion API", "Hosts and registers all PowerTools commands")

@@ -49,9 +49,13 @@ Creates a predefined set of folders in the root of the active Fusion project. Sk
 
 Adds a button to the Navigation Toolbar that opens or closes the Data Pane with a single click. Automatically detects the current pane state and takes the correct action.
 
-#### [Recovery Save](./docs/Recovery%20Save.md)
+#### [Favorites](./docs/Favorites.md)
 
-Adds a **Recovery Save** entry to the QAT File dropdown that writes a local recovery checkpoint for the active document without creating a new cloud version or notifying collaborators.
+Adds a Favorites dropdown to the Quick Access Toolbar where you can save the active document location, quickly jump back to saved locations, and remove saved entries.
+
+#### [Local Recovery Save](./docs/Recovery%20Save.md)
+
+Adds a **Local Recovery Save** entry to the QAT File dropdown that writes a local recovery checkpoint for the active document without creating a new cloud version or notifying collaborators.
 
 ---
 
@@ -85,12 +89,13 @@ C4Context
 
 | Module | Command | UI location |
 |---|---|---|
-| `commands/autosave/` | Recovery Save | QAT → File dropdown |
+| `commands/autosave/` | Local Recovery Save | QAT → File dropdown |
 | `commands/datatoggle/` | Toggle Data Pane | Navigation Toolbar |
 | `commands/defaultfolders/` | Add Default Project Folders | QAT → File dropdown |
 | `commands/dochistory/` | Document History | QAT |
 | `commands/docinfo/` | Document Information | Design workspace → Tools tab → Power Tools panel |
 | `commands/docopen/` | Show In Location | Automatic – no UI control |
+| `commands/favorites/` | Favorites | QAT dropdown |
 
 ---
 

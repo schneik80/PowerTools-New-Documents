@@ -20,6 +20,11 @@ The **Toggle Data Pane** command adds a button to the Fusion Navigation Toolbar 
 - A Fusion document must be open.
 - The PowerTools add-in must be active.
 
+## Notes
+
+- The command uses the current `app.data.isDataPanelVisible` state to decide whether to open or close the Data Pane.
+- The toolbar button is available while the add-in is running.
+
 ## Access
 
 Select **Toggle Data** on the **Navigation Toolbar** at the bottom of the Fusion canvas.

@@ -4,9 +4,18 @@ from .defaultfolders import entry as defaultfolders
 from .dochistory import entry as dochistory
 from .docinfo import entry as docinfo
 from .docopen import entry as docopen
+from .favorites import entry as favorites
 
 # Fusion will automatically call the start() and stop() functions.
-commands = [autosave, datatoggle, defaultfolders, dochistory, docinfo, docopen]
+commands = [
+    autosave,
+    datatoggle,
+    defaultfolders,
+    dochistory,
+    docinfo,
+    docopen,
+    favorites,
+]
 
 
 # Assumes you defined a "start" function in each of your modules.
