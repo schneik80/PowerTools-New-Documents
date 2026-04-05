@@ -20,7 +20,9 @@ ADDIN_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 CACHE_DIR = os.path.join(ADDIN_ROOT, "cache")
-CACHE_FILE = os.path.join(CACHE_DIR, "favorites.json")
+
+# Legacy single-file path — deleted on start if it still exists.
+_LEGACY_CACHE_FILE = os.path.join(CACHE_DIR, "favorites.json")
 
 # Holds references to event handlers to prevent garbage collection
 local_handlers = []
@@ -30,6 +32,9 @@ _favorites_dropdown = None
 
 # Tracks the IDs of dynamically created favorite command definitions for cleanup
 _fav_cmd_ids = []
+
+# Currently active hub ID — drives which per-hub cache file is read/written
+_active_hub_id: str = ""
 
 # Edit dialog state (staged only; committed on OK)
 _edit_staged_favorites = []
@@ -47,7 +52,14 @@ EDIT_COUNT_ID = "PTAT-favorites-edit-count"
 
 
 def start():
-    global _favorites_dropdown
+    global _favorites_dropdown, _active_hub_id
+
+    # Remove the legacy single-file cache so old entries are not used.
+    _remove_legacy_cache()
+
+    # Resolve the hub that is active right now (may be empty string if no
+    # document is open yet; hub will be detected when the first doc activates).
+    _active_hub_id = _get_active_hub_id()
 
     # -- "Favorite This Location" command definition --
     add_cmd_def = ui.commandDefinitions.itemById(CMD_ADD_ID)
@@ -115,13 +127,26 @@ def start():
     _favorites_dropdown.controls.addCommand(edit_cmd_def)
     _favorites_dropdown.controls.addSeparator()
 
-    # Populate with any previously saved favorites
+    # Populate with favorites for the initial hub
     _rebuild_menu()
+
+    # Monitor document events to detect hub changes
+    futil.add_handler(
+        app.documentActivated,
+        _favorites_document_event,
+        local_handlers=local_handlers,
+    )
+    futil.add_handler(
+        app.documentOpened,
+        _favorites_document_event,
+        local_handlers=local_handlers,
+    )
 
 
 def stop():
     global _favorites_dropdown, _fav_cmd_ids, local_handlers
     global _edit_staged_favorites, _edit_checkbox_map, _edit_build_version
+    global _active_hub_id
 
     # Remove the dropdown from the QAT
     qat = ui.toolbars.itemById("QAT")
@@ -152,6 +177,62 @@ def stop():
     _edit_staged_favorites = []
     _edit_checkbox_map = {}
     _edit_build_version = 0
+    _active_hub_id = ""
+
+
+# ---------------------------------------------------------------------------
+# Hub detection and event handler
+# ---------------------------------------------------------------------------
+
+
+def _get_active_hub_id() -> str:
+    """Return the ID of the currently active Fusion hub, or '' if unavailable."""
+    try:
+        hub = app.data.activeHub
+        if hub is None:
+            return ""
+        hub_id = getattr(hub, "id", None) or getattr(hub, "hubId", None)
+        return str(hub_id) if hub_id else ""
+    except Exception:
+        return ""
+
+
+def _hub_cache_file(hub_id: str) -> str:
+    """Return the per-hub cache file path for the given hub ID.
+
+    The hub ID (e.g. 'b.abc123def456') is sanitised by replacing every
+    character that is not alphanumeric or a hyphen/underscore with '_'.
+    Example: 'b.abc123' → cache/favorites_b_abc123.json
+    """
+    if not hub_id:
+        safe = "unknown"
+    else:
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in hub_id)
+    return os.path.join(CACHE_DIR, f"favorites_{safe}.json")
+
+
+def _favorites_document_event(args: adsk.core.DocumentEventArgs):
+    """Fire on documentActivated / documentOpened; switch hub cache if needed."""
+    try:
+        new_hub_id = _get_active_hub_id()
+        if new_hub_id and new_hub_id != _active_hub_id:
+            _on_hub_changed(new_hub_id)
+    except Exception:
+        futil.log(
+            f"Favorites: hub-check error\n{traceback.format_exc()}",
+            adsk.core.LogLevels.ErrorLogLevel,
+        )
+
+
+def _on_hub_changed(new_hub_id: str) -> None:
+    """Update the active hub and rebuild the menu with that hub's favorites."""
+    global _active_hub_id
+    old_hub_id = _active_hub_id
+    _active_hub_id = new_hub_id
+    futil.log(
+        f"Favorites: hub changed from '{old_hub_id}' to '{new_hub_id}', rebuilding menu"
+    )
+    _rebuild_menu()
 
 
 # ---------------------------------------------------------------------------
@@ -159,27 +240,42 @@ def stop():
 # ---------------------------------------------------------------------------
 
 
+def _remove_legacy_cache() -> None:
+    """Delete the old single-file favorites.json if it still exists."""
+    if os.path.exists(_LEGACY_CACHE_FILE):
+        try:
+            os.remove(_LEGACY_CACHE_FILE)
+            futil.log("Favorites: removed legacy cache/favorites.json")
+        except Exception:
+            futil.log(
+                f"Favorites: could not remove legacy cache\n{traceback.format_exc()}",
+                adsk.core.LogLevels.ErrorLogLevel,
+            )
+
+
 def _load_favorites() -> list:
-    """Load the favorites list from the JSON cache file."""
-    if not os.path.exists(CACHE_FILE):
+    """Load the favorites list for the active hub from its per-hub cache file."""
+    cache_file = _hub_cache_file(_active_hub_id)
+    if not os.path.exists(cache_file):
         return []
     try:
-        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        with open(cache_file, "r", encoding="utf-8") as f:
             data = json.load(f)
         return data.get("favorites", [])
     except Exception:
         futil.log(
-            f"Favorites: failed to load cache\n{traceback.format_exc()}",
+            f"Favorites: failed to load cache '{cache_file}'\n{traceback.format_exc()}",
             adsk.core.LogLevels.ErrorLogLevel,
         )
         return []
 
 
 def _save_favorites(favorites: list) -> None:
-    """Persist the favorites list to the JSON cache file."""
+    """Persist the favorites list for the active hub to its per-hub cache file."""
+    cache_file = _hub_cache_file(_active_hub_id)
     os.makedirs(CACHE_DIR, exist_ok=True)
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump({"favorites": favorites}, f, indent=2)
+    with open(cache_file, "w", encoding="utf-8") as f:
+        json.dump({"hub_id": _active_hub_id, "favorites": favorites}, f, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +325,9 @@ def _rebuild_menu() -> None:
         _favorites_dropdown.controls.addCommand(cmd_def)
         _fav_cmd_ids.append(cmd_id)
 
-    futil.log(f"Favorites: menu rebuilt with {len(favorites)} item(s)")
+    futil.log(
+        f"Favorites: menu rebuilt with {len(favorites)} item(s) for hub '{_active_hub_id}'"
+    )
 
 
 def _make_navigate_handler(urn: str, display: str):
@@ -291,13 +389,16 @@ def _add_favorite_execute(args: adsk.core.CommandEventArgs):
             )
             return
 
-        lineage_urn = _get_document_lineage_urn(data_file)
+        # Use data_file.id — the same URN format that Dashboard.ShowInLocation
+        # expects (consistent with the docopen Show In Location command).
+        lineage_urn = getattr(data_file, "id", None)
         if not lineage_urn:
             ui.messageBox(
-                "Unable to determine the active document lineage URN.",
+                "Unable to determine the active document URN.",
                 "Favorites",
             )
             return
+        lineage_urn = str(lineage_urn)
 
         folder = data_file.parentFolder
         if not folder:
@@ -402,8 +503,11 @@ def _edit_favorites_input_changed(args: adsk.core.InputChangedEventArgs):
             fav for i, fav in enumerate(_edit_staged_favorites) if i not in selected_set
         ]
 
-        _build_edit_dialog_inputs(inputs)
+        # Reset the button value BEFORE rebuilding inputs; after the rebuild
+        # the old btn reference points to a deleted object and can no longer
+        # be written to.
         btn.value = False
+        _build_edit_dialog_inputs(inputs)
 
     except Exception:
         futil.log(
@@ -546,19 +650,6 @@ def _get_folder_lineage(folder) -> str:
             break
         depth += 1
     return " > ".join(parts) if parts else "Unknown Location"
-
-
-def _get_document_lineage_urn(data_file) -> str:
-    """Return the best available lineage URN for a DataFile."""
-    # Prefer explicit lineage properties when available.
-    for attr in ("lineageUrn", "lineageURN", "lineageId"):
-        value = getattr(data_file, attr, None)
-        if value:
-            return str(value)
-
-    # In Fusion's DataFile API, id is typically a dm.lineage URN.
-    value = getattr(data_file, "id", None)
-    return str(value) if value else ""
 
 
 def _get_document_name(data_file, doc) -> str:
