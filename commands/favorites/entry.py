@@ -15,6 +15,9 @@ CMD_EDIT_ID = "PTAT-favorites-edit"
 CMD_EDIT_NAME = "Edit Favorites"
 CMD_EDIT_DESCRIPTION = "Edit and remove saved favorites"
 
+# Resource location for command icons, here we assume a sub folder in this directory named "resources".
+ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
+
 # Path to the addin root (3 levels up from this file: entry.py → favorites/ → commands/ → root)
 ADDIN_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -117,10 +120,10 @@ def start():
 
     if anchor_id:
         _favorites_dropdown = qat.controls.addDropDown(
-            CMD_NAME, "", CMD_ID, anchor_id, is_before
+            CMD_NAME, ICON_FOLDER, CMD_ID, anchor_id, is_before
         )
     else:
-        _favorites_dropdown = qat.controls.addDropDown(CMD_NAME, "", CMD_ID)
+        _favorites_dropdown = qat.controls.addDropDown(CMD_NAME, ICON_FOLDER, CMD_ID)
 
     # Fixed "Add" button at the top of the dropdown
     _favorites_dropdown.controls.addCommand(add_cmd_def)
