@@ -2,19 +2,22 @@
 # Copyright (C) 2022-2026 IMA LLC
 
 import adsk.core
+import os
 from ...lib import fusionAddInUtils as futil
 from ... import config
 
 app = adsk.core.Application.get()
 ui = app.userInterface
 
-CMD_NAME = "Show In Location on Open"
+CMD_NAME = "Show In Location"
 
 TOGGLE_CMD_ID = "PT-showinlocation-toggle"
 TOGGLE_CMD_TOOLTIP = (
     "Toggle the automatic 'Show In Location' behavior that runs when a "
     "document is opened or activated."
 )
+
+ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
 
 SETTING_KEY = "show_in_location_enabled"
 SETTING_DEFAULT = True
@@ -87,7 +90,7 @@ def _install_menu():
     toggle_cmd_def = ui.commandDefinitions.itemById(TOGGLE_CMD_ID)
     if not toggle_cmd_def:
         toggle_cmd_def = ui.commandDefinitions.addButtonDefinition(
-            TOGGLE_CMD_ID, _toggle_label(), TOGGLE_CMD_TOOLTIP
+            TOGGLE_CMD_ID, _toggle_label(), TOGGLE_CMD_TOOLTIP, ICON_FOLDER
         )
     else:
         # Sync label with persisted state in case the setting changed while unloaded.

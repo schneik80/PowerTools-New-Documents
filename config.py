@@ -49,27 +49,34 @@ def save_settings(settings: dict) -> None:
 # Shared PowerTools Settings dropdown in the QAT file menu
 # ---------------------------------------------------------------------------
 
-PT_SETTINGS_DROPDOWN_ID = "PT-settings-dropdown"
+PT_SETTINGS_DROPDOWN_ID = "PTSettings"
 PT_SETTINGS_DROPDOWN_NAME = "PowerTools Settings"
 
 
 def get_or_create_pt_settings_dropdown():
-    """Return the PowerTools Settings dropdown in the QAT file menu, creating it if absent."""
+    """Return the shared PowerTools Settings dropdown in the QAT file menu, creating it if absent.
+
+    Uses DropDownControl.cast() — required for itemById to work correctly on
+    controls nested inside built-in menus like FileSubMenuCommand.
+    """
     app = adsk.core.Application.get()
     ui = app.userInterface
     qat = ui.toolbars.itemById("QAT")
     if not qat:
         return None
-    file_dropdown = qat.controls.itemById("FileSubMenuCommand")
+    file_dropdown = adsk.core.DropDownControl.cast(
+        qat.controls.itemById("FileSubMenuCommand")
+    )
     if not file_dropdown:
         return None
 
-    dropdown = file_dropdown.controls.itemById(PT_SETTINGS_DROPDOWN_ID)
-    if not dropdown:
-        dropdown = file_dropdown.controls.addDropDown(
-            PT_SETTINGS_DROPDOWN_NAME, "", PT_SETTINGS_DROPDOWN_ID
-        )
-    return dropdown
+    existing = file_dropdown.controls.itemById(PT_SETTINGS_DROPDOWN_ID)
+    if existing:
+        return adsk.core.DropDownControl.cast(existing)
+
+    return file_dropdown.controls.addDropDown(
+        PT_SETTINGS_DROPDOWN_NAME, "", PT_SETTINGS_DROPDOWN_ID
+    )
 
 
 def remove_from_pt_settings_dropdown(control_id: str) -> None:
@@ -83,17 +90,21 @@ def remove_from_pt_settings_dropdown(control_id: str) -> None:
     qat = ui.toolbars.itemById("QAT")
     if not qat:
         return
-    file_dropdown = qat.controls.itemById("FileSubMenuCommand")
+    file_dropdown = adsk.core.DropDownControl.cast(
+        qat.controls.itemById("FileSubMenuCommand")
+    )
     if not file_dropdown:
         return
 
-    dropdown = file_dropdown.controls.itemById(PT_SETTINGS_DROPDOWN_ID)
-    if not dropdown:
+    pt_settings = adsk.core.DropDownControl.cast(
+        file_dropdown.controls.itemById(PT_SETTINGS_DROPDOWN_ID)
+    )
+    if not pt_settings:
         return
 
-    ctrl = dropdown.controls.itemById(control_id)
+    ctrl = pt_settings.controls.itemById(control_id)
     if ctrl:
         ctrl.deleteMe()
 
-    if dropdown.controls.count == 0:
-        dropdown.deleteMe()
+    if pt_settings.controls.count == 0:
+        pt_settings.deleteMe()

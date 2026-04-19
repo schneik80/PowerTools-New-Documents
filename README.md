@@ -15,9 +15,9 @@ Before you install and run this add-in, confirm that you have the following:
 1. Download or clone this repository to your local machine.
 2. In Autodesk Fusion, open the **Add-Ins** dialog by selecting **Utilities** > **Add-Ins**, or press **Shift+S**.
 3. On the **Add-Ins** tab, click the green **+** icon.
-4. Navigate to the folder where you placed the add-in files and select the `PowerTools-New-Documents` folder.
+4. Navigate to the folder where you placed the add-in files and select the `PowerTools-Document-Tools` folder.
 5. Click **Open**.
-6. Select **PowerTools New Documents** in the list, then click **Run**.
+6. Select **PowerTools Document Tools** in the list, then click **Run**.
 
 To have the add-in load automatically each time Fusion starts, select **Run on Startup** before clicking **Run**.
 
@@ -69,14 +69,14 @@ Automatically runs Fusion's built-in Show In Location command whenever a design 
 
 ## Architecture
 
-PowerTools New Documents is structured as a standard Fusion Python add-in. Each command is an independent module under the `commands/` directory that exposes `start()` and `stop()` functions. The top-level `commands/__init__.py` collects all command modules into a list and delegates lifecycle calls to them.
+PowerTools Document Tools is structured as a standard Fusion Python add-in. Each command is an independent module under the `commands/` directory that exposes `start()` and `stop()` functions. The top-level `commands/__init__.py` collects all command modules into a list and delegates lifecycle calls to them.
 
 ```mermaid
 C4Context
-    title PowerTools New Documents – System Context
+    title PowerTools Document Tools – System Context
 
     Person(user, "Designer", "Fusion user working with cloud data and design documents")
-    System(addin, "PowerTools New Documents", "Fusion Python add-in. Registers commands that extend the Fusion UI for improved data and project management.")
+    System(addin, "PowerTools Document Tools", "Fusion Python add-in. Registers commands that extend the Fusion UI for improved data and project management.")
     System_Ext(fusion, "Autodesk Fusion", "Cloud-connected 3D CAD application. Provides the API surface, UI framework, and data platform.")
     System_Ext(fusionCloud, "Fusion Industry Cloud", "Autodesk cloud data platform. Stores hubs, projects, folders, and document versions.")
 
