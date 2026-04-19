@@ -59,6 +59,26 @@ Adds a **Local Recovery Save** entry to the QAT File dropdown that writes a loca
 
 ---
 
+### Analysis
+
+#### [Version Diff](./docs/Version%20Diff.md)
+
+Compares the active design against any other saved version of the same document and produces an interactive HTML report. Opens a dialog showing the current version metadata and a dropdown for selecting the comparison version; after confirmation the add-in walks both timelines, computes the diff (new / deleted / unchanged features, XREF version changes, sketch modifications via `revisionId`, parameter value changes, and feature health state changes), compares design-level properties (material, mass, volume, area, density, COM, bounding box), and generates a side-by-side HTML report plus a raw JSON export.
+
+| Status | Badge | Detection |
+|---|---|---|
+| New | **NEW** | Feature identity only in newer version |
+| Deleted | **DEL** | Feature identity only in older version |
+| XREF Updated | **VER Δ** | XREF component version comparison |
+| Sketch Modified | **SK Δ** | `Sketch.revisionId` comparison |
+| Params Changed | **PRM Δ** | Numeric parameter comparison with tolerance |
+| Health Changed | **HTH Δ** | Feature health enum change |
+| Unchanged | **SAME** | All checks passed |
+
+Added to the **Tools** tab **Power Tools** panel. Requires a saved design with the parametric timeline and at least two saved versions.
+
+---
+
 ### Automation
 
 #### [Show In Location](./docs/Show%20In%20Location.md)
@@ -96,6 +116,7 @@ C4Context
 | `commands/docinfo/` | Document Information | Design workspace → Tools tab → Power Tools panel |
 | `commands/docopen/` | Show In Location | Automatic – no UI control |
 | `commands/favorites/` | Favorites | QAT dropdown |
+| `commands/versiondiff/` | Version Diff | Design workspace → Tools tab → Power Tools panel |
 
 ---
 

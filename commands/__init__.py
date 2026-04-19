@@ -8,6 +8,7 @@ from .dochistory import entry as dochistory
 from .docinfo import entry as docinfo
 from .docopen import entry as docopen
 from .favorites import entry as favorites
+from .versiondiff import entry as versiondiff
 
 # Fusion will automatically call the start() and stop() functions.
 commands = [
@@ -18,6 +19,7 @@ commands = [
     docinfo,
     docopen,
     favorites,
+    versiondiff,
 ]
 
 
