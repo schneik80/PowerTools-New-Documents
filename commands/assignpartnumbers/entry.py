@@ -163,6 +163,18 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     _targets = intent_mod.iter_targets(design)
     _mode_is_table = len(_targets) > 1
 
+    # NOTE: An earlier version of this command called
+    # intent_mod.targets_missing_model_id() here as a synchronous pre-flight
+    # to detect components lacking MFGDM metadata. That access (which reads
+    # component.dataComponent.mfgdmModelId) is only safe inside an
+    # MFGDMDataReady event callback per Autodesk's sample code. Calling it
+    # from command_created, followed by ui.messageBox() and
+    # args.command.doExecute(True), was observed to crash Fusion on dismiss.
+    # The readback verification in command_execute (below) is our real
+    # safety net — it catches the silent-set failure mode at the moment it
+    # matters, from a regular try/except scope where a crash can't take
+    # down the app.
+
     # Load current hub Pn-Cache counters so previews show the real
     # next-in-scheme number rather than always starting at 000001.
     _load_baseline_counters()
@@ -511,10 +523,28 @@ def command_execute(args: adsk.core.CommandEventArgs):
         # Stamp components. Document save is intentionally left to the user:
         # Fusion's save step can be slow, and the dialog should close
         # immediately on Assign.
+        #
+        # The legacy Component.partNumber setter routes through MFGDM GraphQL
+        # on saved docs and has been observed to silently fail for components
+        # whose cloud metadata isn't ready (e.g., local components added after
+        # the last save). We defend against that by reading the value back
+        # after every set; a mismatch is treated as a stamp failure even
+        # though no exception was raised.
         stamp_errors: List[str] = []
         for target, _prefix, number_str in assignments:
             try:
                 target.component.partNumber = number_str
+                actual = ""
+                try:
+                    actual = target.component.partNumber or ""
+                except Exception:
+                    actual = ""
+                if actual != number_str:
+                    stamp_errors.append(
+                        f"{target.label}: set to {number_str!r} but readback "
+                        f"returned {actual!r} (component likely lacks MFGDM "
+                        f"metadata — save the document and retry)"
+                    )
             except Exception as exc:
                 stamp_errors.append(f"{target.label}: {exc}")
 

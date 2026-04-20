@@ -29,10 +29,18 @@ from . import hub_fs
 from . import schemes
 
 
-MAX_RETRIES = 3
-RETRY_BACKOFF_SECONDS = 0.6  # doubles each retry: 0.6, 1.2, 2.4
-UPLOAD_POLL_INTERVAL_SECONDS = 0.25
-UPLOAD_TIMEOUT_SECONDS = 60
+# Tuning: pn-cache.json is a few hundred bytes. A healthy hub upload
+# completes in well under a second. The timeouts here are deliberately
+# tight so Fusion's UI never appears hung for long if the hub is slow or
+# unreachable. Worst-case total wall-clock time ≈ MAX_RETRIES *
+# UPLOAD_TIMEOUT_SECONDS + sum of backoffs.
+MAX_RETRIES = 2  # 3 total attempts (initial + 2 retries)
+RETRY_BACKOFF_SECONDS = 0.5  # doubles each retry: 0.5, 1.0
+UPLOAD_POLL_INTERVAL_SECONDS = 0.15
+UPLOAD_TIMEOUT_SECONDS = 15  # per upload attempt
+# Progress-bar messages during the poll loop keep the user informed that
+# the command is alive and waiting on the hub rather than hung.
+UPLOAD_PROGRESS_EVERY_SECONDS = 2.0
 
 CACHE_SCHEMA_VERSION = 1
 
@@ -130,8 +138,14 @@ def _serialize(counters: Dict[str, int], updated_by: str) -> bytes:
     return json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
 
 
-def _wait_for_upload(future) -> None:
-    """Block until a DataFileFuture finishes, or raise PnCacheError on timeout/failure."""
+def _wait_for_upload(future, progress_label: str = "") -> None:
+    """Block until a DataFileFuture finishes, or raise PnCacheError on timeout/failure.
+
+    Calls adsk.doEvents() every poll interval so Fusion's UI thread can
+    repaint. When ``progress_label`` is non-empty, periodically updates
+    ``ui.progressBar`` so the user sees that the command is alive and
+    waiting on the hub.
+    """
     if future is None:
         raise PnCacheError("uploadFile returned no future.")
 
@@ -140,13 +154,32 @@ def _wait_for_upload(future) -> None:
     state_finished = getattr(adsk.core.UploadStates, "UploadFinished", None)
     state_failed = getattr(adsk.core.UploadStates, "UploadFailed", None)
 
-    deadline = time.time() + UPLOAD_TIMEOUT_SECONDS
+    progress = None
+    if progress_label:
+        try:
+            progress = adsk.core.Application.get().userInterface.progressBar
+        except Exception:
+            progress = None
+
+    start = time.time()
+    deadline = start + UPLOAD_TIMEOUT_SECONDS
+    next_message_at = start + UPLOAD_PROGRESS_EVERY_SECONDS
+
     while time.time() < deadline:
         state = future.uploadState
         if state_finished is not None and state == state_finished:
             return
         if state_failed is not None and state == state_failed:
             raise PnCacheError("pn-cache.json upload failed (UploadFailed state).")
+
+        if progress is not None and time.time() >= next_message_at:
+            elapsed = int(time.time() - start)
+            try:
+                progress.showBusy(f"{progress_label} (waiting {elapsed}s)")
+            except Exception:
+                pass
+            next_message_at = time.time() + UPLOAD_PROGRESS_EVERY_SECONDS
+
         adsk.doEvents()
         time.sleep(UPLOAD_POLL_INTERVAL_SECONDS)
 
@@ -158,7 +191,8 @@ def _wait_for_upload(future) -> None:
 def upload_snapshot(folder: adsk.core.DataFolder,
                     counters: Dict[str, int],
                     updated_by: str,
-                    tmp_dir: str) -> int:
+                    tmp_dir: str,
+                    progress_label: str = "") -> int:
     """Upload the given counters as a new version of pn-cache.json.
 
     Returns the new latest version number (>= 1). Raises PnCacheError on
@@ -172,7 +206,7 @@ def upload_snapshot(folder: adsk.core.DataFolder,
         fh.write(_serialize(counters, updated_by))
 
     future = folder.uploadFile(local_path)
-    _wait_for_upload(future)
+    _wait_for_upload(future, progress_label=progress_label)
 
     # Re-resolve the DataFile to pick up the new version.
     new_file = hub_fs.find_pn_cache_file(folder)
@@ -220,8 +254,10 @@ def commit_assignments(app: adsk.core.Application,
     """
     last_error: Optional[Exception] = None
     backoff = RETRY_BACKOFF_SECONDS
+    total_attempts = MAX_RETRIES + 1
 
-    for attempt in range(MAX_RETRIES + 1):
+    for attempt in range(total_attempts):
+        label = f"Pn-Cache commit (attempt {attempt + 1}/{total_attempts})"
         try:
             project = hub_fs.find_assets_project(app)
             folder = hub_fs.find_or_create_pn_cache_folder(project)
@@ -243,7 +279,10 @@ def commit_assignments(app: adsk.core.Application,
                     retries_used=attempt,
                 )
 
-            new_version = upload_snapshot(folder, new_counters, updated_by, tmp_dir)
+            new_version = upload_snapshot(
+                folder, new_counters, updated_by, tmp_dir,
+                progress_label=label,
+            )
 
             # Verify nobody raced us: re-download and confirm the counters we
             # just wrote are what's live. We compare counters rather than
@@ -270,7 +309,8 @@ def commit_assignments(app: adsk.core.Application,
             backoff *= 2
 
     raise PnCacheError(
-        f"Could not commit pn-cache.json after {MAX_RETRIES + 1} attempts: {last_error}"
+        f"Could not commit pn-cache.json after {total_attempts} attempts "
+        f"(per-attempt timeout {UPLOAD_TIMEOUT_SECONDS}s): {last_error}"
     )
 
 

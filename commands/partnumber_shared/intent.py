@@ -185,6 +185,58 @@ def _safe_pn(component: adsk.fusion.Component) -> str:
     return pn
 
 
+# ---------------------------------------------------------------------------
+# MFGDM model-ID access — DO NOT call from command_created or any other
+# synchronous entry point.
+#
+# Per Autodesk's sample code and the MFGDM API preview docs, accessing
+# ``component.dataComponent.mfgdmModelId`` is only safe from inside an
+# MFGDMDataReady event callback. Reading it from command_created and then
+# showing a modal messageBox + args.command.doExecute(True) was observed to
+# crash Fusion on dismiss.
+#
+# The helpers below are retained because they may be useful from inside a
+# properly-registered MFGDMDataReady handler in a future refactor, but they
+# must not be invoked from a regular command callback. The current
+# assignment flow relies on the readback verification after
+# ``component.partNumber = value`` to detect silent-set failures instead.
+# ---------------------------------------------------------------------------
+
+
+def mfgdm_model_id(component: adsk.fusion.Component) -> str:  # noqa: D401
+    """Return the component's MFGDM model ID, or "" if not yet available.
+
+    .. warning::
+       Only safe to call from within an ``MFGDMDataReady`` event handler.
+       Calling this from ``command_created`` or similar synchronous contexts
+       has been observed to destabilize Fusion. See module-level comment.
+    """
+    try:
+        data = component.dataComponent
+    except Exception:
+        return ""
+    if data is None:
+        return ""
+    try:
+        return data.mfgdmModelId or ""
+    except Exception:
+        return ""
+
+
+def targets_missing_model_id(targets: List[Target]) -> List[Target]:
+    """Return the subset of ``targets`` whose components lack an MFGDM model ID.
+
+    .. warning::
+       Only safe to call from within an ``MFGDMDataReady`` event handler.
+       See :func:`mfgdm_model_id` for the rationale.
+    """
+    missing: List[Target] = []
+    for t in targets:
+        if not mfgdm_model_id(t.component):
+            missing.append(t)
+    return missing
+
+
 def _safe_token(component: adsk.fusion.Component) -> str:
     try:
         return component.entityToken or ""

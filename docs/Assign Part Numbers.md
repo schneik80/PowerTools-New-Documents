@@ -21,6 +21,7 @@ When the active design has local components, the dialog presents a per-component
 | Auto-PN suppression | Fusion's auto-generated placeholder part numbers (`YYYY-MM-DD-HH-MM-SS-mmm`) are treated as no existing assignment and do not trigger the overwrite prompt |
 | Live preview | Each row previews its next-in-scheme number as the user picks a scheme; numbers stay sequential across rows that share a prefix |
 | Atomic commit | All rows in a single invocation bump the cache in one version, so the numbers assigned are contiguous and never interleave with another user's numbers |
+| Readback verification | After each `component.partNumber` set, the value is re-read; a mismatch is reported as a stamp failure even when the set call itself did not raise. This is the primary safety net against the MFGDM silent-set failure mode |
 
 ## Schemes
 
@@ -40,6 +41,7 @@ Numbers are zero-padded to six digits: `PRT-000001`, `ASY-000042`, `TOL-000017`,
 - The active document must be a saved Autodesk Fusion 3D design.
 - The active hub must contain a project named **Assets** (project creation is deliberately not automated — it usually requires admin permissions).
 - The user must have write permission on the **Assets** project.
+- Ideally all targets have been saved to the cloud at least once so their MFGDM metadata exists. If not, the stamp step will fail for those targets and the failures will be listed in the post-close warning. See *Cloud metadata (MFGDM) readiness* under **Architecture**.
 
 ## Notes
 
@@ -47,6 +49,7 @@ Numbers are zero-padded to six digits: `PRT-000001`, `ASY-000042`, `TOL-000017`,
 - `pn-cache.json` is auto-created on first commit and versioned thereafter by Fusion's normal file-versioning.
 - Document save after assignment is intentionally left to the user so the command dialog closes promptly on **Assign**.
 - Deleted documents do not release their numbers back to the pool — numbering is monotonic.
+- The command verifies every `component.partNumber` write with an immediate readback. Discrepancies are reported as stamp errors in the post-close warning message rather than silently ignored.
 
 ## Access
 
@@ -90,6 +93,7 @@ If any target already has a user-assigned part number (not a Fusion auto-generat
 ## Limitations
 
 - The **Assets** project must exist; if absent, the command aborts with a clear error message.
+- Stamping a local component that was added since the last document save routes through the MFGDM GraphQL API and silently fails because the component has no cloud metadata yet. The readback verification catches this and surfaces the affected component names in the post-close warning; the user should save the document and re-run for those targets. The hub cache counter is still consumed for the failed stamp — the number it would have assigned is simply not written to the component. See *Cloud metadata (MFGDM) readiness* under **Architecture** for the full rationale.
 - Numbers are not recycled when documents or components are deleted.
 - Part numbers for referenced (linked) components are **not** assigned by this command — those belong to the source design and must be assigned there.
 - The preview number shown in the dialog reflects the cache state at the moment the dialog opened. If a teammate commits between dialog open and **Assign**, the optimistic-retry loop transparently picks a fresh baseline and the actual assigned number may differ from the preview.
@@ -137,11 +141,12 @@ C4Component
         Component(pn_cache, "pn_cache", "Python / partnumber_shared", "download_snapshot(); upload_snapshot(); commit_assignments() with optimistic retry")
         Component(validate, "command_validate_inputs()", "Python", "Disables Assign button until at least one row picks a real scheme")
         Component(input_changed, "command_input_changed()", "Python", "Recomputes per-row preview numbers on every scheme change")
-        Component(execute, "command_execute()", "Python", "Confirms overwrites; commits cache; stamps component.partNumber")
+        Component(execute, "command_execute()", "Python", "Confirms overwrites; commits cache; stamps component.partNumber and verifies each write with a readback")
         Component(destroy, "command_destroy()", "Python", "Clears dialog state; surfaces any deferred error after dialog closes")
     }
-    System_Ext(fusion, "Autodesk Fusion", "Provides Component.partNumber, DesignIntentTypes, DataFolder upload/download, DataFileFuture")
+    System_Ext(fusion, "Autodesk Fusion", "Provides Component.partNumber, DataComponent.mfgdmModelId, DesignIntentTypes, DataFolder upload/download")
     System_Ext(hub, "Autodesk Hub", "Stores Assets/Pn-Cache/pn-cache.json with full version history")
+    System_Ext(mfgdm_gql, "MFGDM GraphQL API", "Cloud service that backs Component.partNumber reads and writes for saved documents")
 
     Rel(button, created, "Triggers on click")
     Rel(created, intent, "Builds Target list")
@@ -153,7 +158,8 @@ C4Component
     Rel(input_changed, schemes, "Formats preview as prefix + (baseline + offset)")
     Rel(validate, execute, "Gates OK button")
     Rel(execute, pn_cache, "commit_assignments() with per-prefix increments")
-    Rel(execute, fusion, "Writes component.partNumber on each stamped target")
+    Rel(execute, fusion, "Writes component.partNumber; reads it back to verify")
+    Rel(fusion, mfgdm_gql, "partNumber set routes through MFGDM GraphQL on saved docs")
     Rel(execute, destroy, "Stashes any error for post-close surfacing")
 ```
 
@@ -185,8 +191,11 @@ flowchart TD
     K -- No --> L[commit_assignments: download + modify +\nupload + verify, up to 3 retries]
     L --> L1{Cache commit succeeded?}
     L1 -- No --> L2[Stash error; dialog closes;\nerror surfaced in destroy]
-    L1 -- Yes --> M[Stamp component.partNumber\non each chosen target]
-    M --> N[Dialog closes]
+    L1 -- Yes --> M[For each target:\nset component.partNumber\nthen read back and verify match]
+    M --> M1{All readbacks matched?}
+    M1 -- No --> M2[Stash per-target mismatch error]
+    M1 -- Yes --> N[Dialog closes]
+    M2 --> N
     N --> O[destroy clears state and\nshows any deferred error]
 ```
 
@@ -281,6 +290,21 @@ The cache commit flow is a read-modify-write with optimistic retry, gated so `co
 7. Only after the cache is durable: set `component.partNumber` on each target.
 
 This guarantees the cache and the component stamps never diverge: either the cache records the number and the component is stamped, or neither happens.
+
+### Cloud metadata (MFGDM) readiness
+
+Autodesk's `Component.partNumber` setter routes through the MFGDM GraphQL API for saved documents. The cloud service keys each component by a timeless `mfgdmModelId` that is generated by the cloud when the component is first saved. Two known states produce an empty `mfgdmModelId` and cause the legacy setter to **silently fail**:
+
+- A local component was added to a saved design but the design has not been saved since. Internal components get their cloud ID only on the next parent-document save.
+- The document was just opened or saved and the `MFGDMDataReady` event hasn't fired yet — cloud ingestion lag.
+
+**Detection strategy**: the command detects these failures after-the-fact via **readback verification** in `command_execute`. After every `component.partNumber = value`, the property is read back. A mismatch is recorded as a stamp error and surfaced to the user through the post-close warning message — even when the setter call itself did not raise an exception. Affected components are listed by name so the user can save the document and re-run the command.
+
+**Why not pre-flight?** An earlier iteration of this command attempted a synchronous pre-flight that read `component.dataComponent.mfgdmModelId` from inside `command_created`. Autodesk's own sample code only ever accesses this property from inside an `MFGDMDataReady` event callback — the property is part of a preview API and reading it outside that event is not supported. In practice, reading it synchronously followed by a `ui.messageBox` + `args.command.doExecute(True)` cancel sequence crashed Fusion on dismiss. The readback gate covers the same failure mode without entering that fragile code path.
+
+The MFGDM GraphQL API also exposes a direct `assignModelPartNumber` mutation that bypasses the legacy setter. This command deliberately does **not** call it today — the legacy setter remains the canonical path Autodesk is optimizing, and the readback gate covers the documented silent-failure mode. A future migration to direct GraphQL stamping — gated on an `MFGDMDataReady`-driven worker — is straightforward if field testing shows the readback gate is insufficient.
+
+**Trade-off**: because the pre-flight is gone, a silent stamp failure now consumes the cache counter the stamp would have used. The number is not written to the component, but the next successful stamp will use the number after it. Numbers are cheap; a crash is not.
 
 ---
 
