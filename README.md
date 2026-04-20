@@ -59,6 +59,22 @@ Adds a **Local Recovery Save** entry to the QAT File dropdown that writes a loca
 
 ---
 
+### Part numbering
+
+#### [Assign Part Numbers](./docs/Assign%20Part%20Numbers.md)
+
+Stamps controlled, hub-unique part numbers on the active 3D design and, when present, on each local component. A per-component table lets each target pick its own scheme (`PRT`, `ASY`, `WLD`, `COT`, `TOL`) filtered by the design's intent; counters are persisted in `Assets / Pn-Cache / pn-cache.json` on the active hub and updated with optimistic-retry so multiple users never mint duplicate numbers. Fusion's auto-generated placeholder part numbers (bare timestamps) are suppressed from the overwrite-confirm flow.
+
+Added to the **Tools** tab **Power Tools** panel. Requires a saved design and an `Assets` project in the active hub.
+
+#### [Assign Drawing Number](./docs/Assign%20Drawing%20Number.md)
+
+Reserves the next `DWG-NNNNNN` from the same hub Pn-Cache and stamps it on the active 2D drawing as a durable Fusion Attribute (group `PowerTools.PartNumber`, name `assigned`). A future command will read that attribute to stamp the number into the drawing titleblock.
+
+Added to the Drawing workspace's **Document** tab in a dedicated **Power Tools** panel. Requires a saved drawing and an `Assets` project in the active hub.
+
+---
+
 ### Analysis
 
 #### [Version Diff](./docs/Version%20Diff.md)
@@ -109,6 +125,8 @@ C4Context
 
 | Module | Command | UI location |
 |---|---|---|
+| `commands/assigndrawingnumber/` | Assign Drawing Number | Drawing workspace → Document tab → Power Tools panel |
+| `commands/assignpartnumbers/` | Assign Part Numbers | Design workspace → Tools tab → Power Tools panel |
 | `commands/autosave/` | Local Recovery Save | QAT → File dropdown |
 | `commands/datatoggle/` | Toggle Data Pane | Navigation Toolbar |
 | `commands/defaultfolders/` | Add Default Project Folders | QAT → File dropdown |
@@ -116,6 +134,7 @@ C4Context
 | `commands/docinfo/` | Document Information | Design workspace → Tools tab → Power Tools panel |
 | `commands/docopen/` | Show In Location | Automatic – no UI control |
 | `commands/favorites/` | Favorites | QAT dropdown |
+| `commands/partnumber_shared/` | *(shared utilities)* | Used by Assign Part Numbers and Assign Drawing Number — schemes, intent detection, hub filesystem navigation, and Pn-Cache optimistic-retry |
 | `commands/versiondiff/` | Version Diff | Design workspace → Tools tab → Power Tools panel |
 
 ---

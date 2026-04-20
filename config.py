@@ -21,6 +21,17 @@ my_panel_name = "Power Tools"
 my_panel_after = ""
 
 # ---------------------------------------------------------------------------
+# Drawing workspace — target for commands that run inside a 2D drawing doc.
+# FusionDocTab is a built-in Drawing-workspace tab, so we never create or
+# delete it; we only add/remove our own PowerTools panel on it.
+# ---------------------------------------------------------------------------
+drawing_workspace = "FusionDocumentationEnvironment"
+drawing_tab_id = "FusionDocTab"
+drawing_panel_id = "PT_DrawingPowerTools"
+drawing_panel_name = "Power Tools"
+drawing_panel_after = ""
+
+# ---------------------------------------------------------------------------
 # Shared cache / settings paths
 # ---------------------------------------------------------------------------
 

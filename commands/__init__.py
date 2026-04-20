@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2022-2026 IMA LLC
 
+from .assigndrawingnumber import entry as assigndrawingnumber
+from .assignpartnumbers import entry as assignpartnumbers
 from .autosave import entry as autosave
 from .datatoggle import entry as datatoggle
 from .defaultfolders import entry as defaultfolders
@@ -12,6 +14,8 @@ from .versiondiff import entry as versiondiff
 
 # Fusion will automatically call the start() and stop() functions.
 commands = [
+    assigndrawingnumber,
+    assignpartnumbers,
     autosave,
     datatoggle,
     defaultfolders,
