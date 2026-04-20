@@ -21,6 +21,7 @@ When the active design has local components, the dialog presents a per-component
 | Auto-PN suppression | Fusion's auto-generated placeholder part numbers (`YYYY-MM-DD-HH-MM-SS-mmm`) are treated as no existing assignment and do not trigger the overwrite prompt |
 | Live preview | Each row previews its next-in-scheme number as the user picks a scheme; numbers stay sequential across rows that share a prefix |
 | Atomic commit | All rows in a single invocation bump the cache in one version, so the numbers assigned are contiguous and never interleave with another user's numbers |
+| Inline overwrite notice | When any target already has a user-assigned part number, the dialog shows an inline warning listing the affected components and their current values. No extra modal confirmation — clicking Assign on a chosen scheme replaces the existing number; leaving a row at `(skip)` preserves it |
 | Readback verification | After each `component.partNumber` set, the value is re-read; a mismatch is reported as a stamp failure even when the set call itself did not raise. This is the primary safety net against the MFGDM silent-set failure mode |
 
 ## Schemes
@@ -74,16 +75,22 @@ The **Assign Part Numbers** command is located on the **Tools** tab, in the **Po
 2. Run **Assign Part Numbers**.
 3. The dialog shows:
    - The design intent (e.g., `Hybrid Intent`).
+   - An inline warning note listing affected components, shown only when any target already has a user-assigned part number.
    - A **Components** group with a table. Row 1 is the root component, tagged `(root)`. Subsequent rows are each unique local component.
    - Each row has its own **Scheme** dropdown (defaulted to `(skip)`) and read-only **Preview**.
 4. Pick schemes per row. The **Preview** column updates live so each row previews the actual number it will receive. Rows sharing a prefix advance sequentially (first `PRT` row previews the next number, second previews the one after, and so on).
-5. Leave any row at `(skip)` to exclude it from the assignment.
+5. Leave any row at `(skip)` to exclude it from the assignment. This also preserves an existing part number on that component.
 6. The **Assign** button is disabled until at least one row picks a real scheme.
-7. Click **Assign**. All chosen rows are committed to the hub cache in a single atomic update; `component.partNumber` is stamped on each chosen component; the dialog closes.
+7. Click **Assign**. All chosen rows are committed to the hub cache in a single atomic update; `component.partNumber` is stamped on each chosen component; the dialog closes. Rows whose targets had a prior part number are replaced in-place with no further confirmation.
 
-### Overwrite confirmation
+### Overwrite notice
 
-If any target already has a user-assigned part number (not a Fusion auto-generated placeholder), clicking **Assign** opens a confirmation listing the targets and their current part numbers. **Yes** overwrites; **No** cancels with no changes to the cache or any component.
+If any target already has a user-assigned part number (not a Fusion auto-generated placeholder), an inline warning is shown in the dialog listing the affected components and their current values. No extra modal confirmation is shown — the dialog has all the information up front, so clicking **Assign** proceeds directly:
+
+- Rows with a real scheme chosen have their existing part number replaced by the new one.
+- Rows left at `(skip)` keep their existing part number unchanged.
+
+To back out without making any changes, click **Cancel**.
 
 ## Output
 
@@ -177,18 +184,14 @@ flowchart TD
     D --> E[Filter Fusion auto-generated placeholder PNs to empty]
     E --> F[Download pn-cache.json from hub\npopulate baseline counters]
     F --> G{Local components?}
-    G -- No --> G1[Build simple dialog:\nscheme dropdown + preview]
-    G -- Yes --> G2[Build table dialog:\none row per target with\nscheme dropdown and preview]
+    G -- No --> G1[Build simple dialog:\nlabel + optional current P/N +\nwarning note if current P/N exists +\nscheme dropdown + preview]
+    G -- Yes --> G2[Build table dialog:\nwarning note listing components\nwith existing P/N +\none row per target]
     G1 --> H[User picks schemes]
     G2 --> H
     H --> I[Live preview updates:\nbaseline counter + per-prefix offset]
     I --> J{User clicks Assign?}
     J -- No / Cancel --> J1[Dialog closes; no changes]
-    J -- Yes --> K{Any target already has\na user-assigned PN?}
-    K -- Yes --> K1{Overwrite confirmed?}
-    K1 -- No --> J1
-    K1 -- Yes --> L
-    K -- No --> L[commit_assignments: download + modify +\nupload + verify, up to 3 retries]
+    J -- Yes --> L[commit_assignments: download + modify +\nupload + verify, up to 3 retries]
     L --> L1{Cache commit succeeded?}
     L1 -- No --> L2[Stash error; dialog closes;\nerror surfaced in destroy]
     L1 -- Yes --> M[For each target:\nset component.partNumber\nthen read back and verify match]

@@ -18,7 +18,7 @@ This command shares the same hub cache (`Assets / Pn-Cache / pn-cache.json`) use
 | Durable stamp | Assigned number stored as an `adsk.core.Attribute` on the DrawingDocument, group `PowerTools.PartNumber`, name `assigned` |
 | Optimistic retry | Cache commit uses download → modify → upload → verify with up to 3 retries to handle concurrent writers |
 | Live preview | Dialog shows the actual next `DWG-NNNNNN` by reading the hub cache when the dialog opens |
-| Overwrite confirm | If the drawing already has an assigned number, a confirmation prompt must be acknowledged before it is overwritten |
+| Inline overwrite notice | When the drawing already has a number, the dialog shows the current value and an inline warning note. No extra modal confirmation — clicking Assign replaces the existing number |
 | Titleblock integration hook | The attribute storage is the target for a future command that writes the number into the drawing titleblock |
 
 ## Prerequisites
@@ -47,10 +47,11 @@ The **Assign Drawing Number** command is located on the **Document** tab, in the
 2. Run **Assign Drawing Number** from the **Power Tools** panel.
 3. The dialog shows:
    - **Scheme** — the fixed `DWG — Drawing (controlled document)` label.
-   - **Current number** — the drawing's existing assigned number, if any (read-only).
+   - **Current number** — the drawing's existing assigned number. This row appears only when a prior number exists on the drawing.
+   - **Warning note** — an inline yellow warning, shown only when a prior number exists, explaining that clicking **Assign** will replace it with the preview below.
    - **Will assign** — the real next `DWG-NNNNNN` read from the hub cache.
-4. If the drawing already has an assigned number, click **Assign** to open the overwrite confirmation; click **Yes** to proceed or **No** to cancel.
-5. Click **Assign**. The cache counter is bumped atomically; the new number is written as a Fusion Attribute on the drawing document; the dialog closes.
+4. Click **Assign**. The cache counter is bumped atomically and the new number is written as a Fusion Attribute on the drawing document; the dialog closes. If the drawing had a prior number, it is replaced — no additional modal confirmation is shown.
+5. To back out without changing anything, click **Cancel**.
 
 ## Output
 
@@ -136,17 +137,16 @@ flowchart TD
     C -- No --> C1[Show error; abort]
     C -- Yes --> D[Read existing assigned attribute if any]
     D --> E[Peek next DWG number from hub cache]
-    E --> F[Build dialog:\nScheme + Current number + Will assign preview]
-    F --> G{User clicks Assign?}
+    E --> F{Existing assigned\nattribute found?}
+    F -- Yes --> F1[Build dialog:\nScheme + Current number + inline\noverwrite warning + Will assign preview]
+    F -- No --> F2[Build dialog:\nScheme + Will assign preview]
+    F1 --> G{User clicks Assign?}
+    F2 --> G
     G -- No / Cancel --> G1[Dialog closes; no changes]
-    G -- Yes --> H{Existing assigned number?}
-    H -- Yes --> H1{Overwrite confirmed?}
-    H1 -- No --> G1
-    H1 -- Yes --> I
-    H -- No --> I[commit_assignments: download + modify +\nupload + verify, up to 3 retries]
+    G -- Yes --> I[commit_assignments: download + modify +\nupload + verify, up to 3 retries]
     I --> I1{Cache commit succeeded?}
     I1 -- No --> I2[Stash error; dialog closes;\nerror surfaced in destroy]
-    I1 -- Yes --> J[Write Fusion Attribute:\ngroup=PowerTools.PartNumber name=assigned]
+    I1 -- Yes --> J[Write Fusion Attribute:\ngroup=PowerTools.PartNumber name=assigned\n(replacing any prior value)]
     J --> K[Dialog closes]
     K --> L[destroy clears state and\nshows any deferred error]
 ```

@@ -255,7 +255,12 @@ def _intent_label(intent_value: int) -> str:
 
 def _build_simple_inputs(inputs: adsk.core.CommandInputs,
                          target: intent_mod.Target) -> None:
-    """One scheme dropdown + one preview field (root only, no local comps)."""
+    """One scheme dropdown + one preview field (root only, no local comps).
+
+    When the target already has a user-assigned part number, an inline
+    warning note is shown so the user has full context before clicking
+    Assign. No modal confirmation is needed on execute.
+    """
     inputs.addTextBoxCommandInput(
         "ap_root_label",
         "Component",
@@ -269,6 +274,17 @@ def _build_simple_inputs(inputs: adsk.core.CommandInputs,
             _escape_html(target.current_pn),
             1, True,
         )
+        note = inputs.addTextBoxCommandInput(
+            "ap_overwrite_note",
+            "",
+            (
+                "<span style='color:#b06000'><b>⚠ This component already has a "
+                "part number.</b></span> Selecting a scheme below and clicking "
+                f"<b>Assign</b> will replace <b>{_escape_html(target.current_pn)}</b>."
+            ),
+            4, True,
+        )
+        note.isFullWidth = True
 
     dropdown = inputs.addDropDownCommandInput(
         INPUT_SCHEME_SIMPLE,
@@ -295,11 +311,39 @@ def _build_table_inputs(inputs: adsk.core.CommandInputs,
     created on the group's ``children`` collection (not the outer inputs).
     The same TextBox-for-display, DropDown-for-choice recipe that
     `refrences` and `globalParameters` both use successfully.
+
+    When any target already has a user-assigned part number, an inline
+    warning note is shown above the group listing the affected components.
+    No modal confirmation is needed on execute.
     """
     futil.log(
         f"{CMD_NAME}: building table with {len(targets)} target(s): "
         + ", ".join(t.label for t in targets)
     )
+
+    with_existing = [t for t in targets if t.current_pn]
+    if with_existing:
+        count = len(with_existing)
+        plural = count != 1
+        affected = ", ".join(
+            f"<b>{_escape_html(t.label)}</b> ({_escape_html(t.current_pn)})"
+            for t in with_existing
+        )
+        note = inputs.addTextBoxCommandInput(
+            "ap_overwrite_note",
+            "",
+            (
+                f"<span style='color:#b06000'><b>⚠ {count} component"
+                f"{'s' if plural else ''} already "
+                f"{'have' if plural else 'has'} a part number.</b></span> "
+                f"Assigning a scheme to {'any of them' if plural else 'it'} "
+                "below will replace the existing value. Leave a row at "
+                "<b>(skip)</b> to preserve its current number. "
+                f"Affected: {affected}."
+            ),
+            5, True,
+        )
+        note.isFullWidth = True
 
     group = inputs.addGroupCommandInput("ap_group", "Components")
     group.isExpanded = True
@@ -475,20 +519,15 @@ def command_execute(args: adsk.core.CommandEventArgs):
             futil.log(f"{CMD_NAME} execute: nothing to assign — closing")
             return
 
-        # Overwrite confirmation (modal — runs before we do any work).
+        # The dialog already surfaced an inline warning when any target had
+        # an existing part number, so no modal confirmation is needed here.
+        # We log each overwrite for audit/diagnostic purposes.
         overwrites = [t for t, _ in to_assign if t.current_pn]
         if overwrites:
-            lines = "\n".join(f"  - {t.label}: {t.current_pn}" for t in overwrites)
-            proceed = ui.messageBox(
-                "The following already have a part number assigned. "
-                "Overwrite?\n\n" + lines,
-                CMD_NAME,
-                adsk.core.MessageBoxButtonTypes.YesNoButtonType,
-                adsk.core.MessageBoxIconTypes.WarningIconType,
+            futil.log(
+                f"{CMD_NAME} execute: overwriting "
+                + ", ".join(f"{t.label}={t.current_pn!r}" for t in overwrites)
             )
-            if proceed != adsk.core.DialogResults.DialogYes:
-                futil.log(f"{CMD_NAME} execute: overwrite declined — closing")
-                return
 
         # Tally increments by prefix.
         increments: Dict[str, int] = {}

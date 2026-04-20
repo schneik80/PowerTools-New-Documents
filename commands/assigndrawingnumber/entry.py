@@ -160,10 +160,27 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         1, True,
     )
 
-    current_input = inputs.addStringValueInput(
-        INPUT_CURRENT, "Current number", current
-    )
-    current_input.isReadOnly = True
+    # Show the current number and an inline warning only when one exists —
+    # this replaces the modal overwrite confirmation so the user has all the
+    # information in one place and clicking Assign does exactly what it says.
+    if current:
+        current_input = inputs.addStringValueInput(
+            INPUT_CURRENT, "Current number", current
+        )
+        current_input.isReadOnly = True
+
+        note = inputs.addTextBoxCommandInput(
+            "ad_overwrite_note",
+            "",
+            (
+                "<span style='color:#b06000'><b>⚠ This drawing already has a "
+                "number assigned.</b></span> Clicking <b>Assign</b> will "
+                f"replace <b>{_escape_html(current)}</b> with the new number "
+                f"shown below."
+            ),
+            4, True,
+        )
+        note.isFullWidth = True
 
     preview_input = inputs.addStringValueInput(
         INPUT_PREVIEW, "Will assign", preview_text,
@@ -172,6 +189,14 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
     futil.add_handler(cmd.execute, command_execute, local_handlers=local_handlers)
     futil.add_handler(cmd.destroy, command_destroy, local_handlers=local_handlers)
+
+
+def _escape_html(s: str) -> str:
+    return (
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+    )
 
 
 def _peek_next_drawing_number() -> tuple:
@@ -205,17 +230,13 @@ def command_execute(args: adsk.core.CommandEventArgs):
             deferred_error = "Active document is no longer a drawing."
             return
 
+        # The dialog already showed the user an inline warning and the
+        # existing number when one was present, so no modal confirmation is
+        # needed here — Assign means Assign. We still log the overwrite for
+        # audit/diagnostic purposes.
         existing = _read_existing_drawing_number(doc)
         if existing:
-            proceed = ui.messageBox(
-                f"This drawing already has number '{existing}'.\n\nOverwrite?",
-                CMD_NAME,
-                adsk.core.MessageBoxButtonTypes.YesNoButtonType,
-                adsk.core.MessageBoxIconTypes.WarningIconType,
-            )
-            if proceed != adsk.core.DialogResults.DialogYes:
-                futil.log(f"{CMD_NAME} execute: overwrite declined — closing")
-                return
+            futil.log(f"{CMD_NAME} execute: overwriting existing number {existing!r}")
 
         progress = ui.progressBar
         progress.showBusy(f"{CMD_NAME} — updating hub Pn-Cache...")
