@@ -3,11 +3,22 @@
 """Assign Drawing Number — reserves the next DWG-NNNNNN number from the
 hub-wide Pn-Cache and stamps it on the active Drawing document.
 
-Because adsk.drawing does not expose a first-class ``partNumber`` property
-and ``DataFile.description`` is read-only in the Python API, the assigned
-number is stored as an ``adsk.core.Attribute`` on the DrawingDocument
-(group ``PowerTools.PartNumber``, name ``assigned``). A follow-up command
-will pick this up to stamp the titleblock.
+Storage happens in two places, both automatic:
+
+1. **Drawing document attribute** (canonical local record) — stored as an
+   ``adsk.core.Attribute`` on the DrawingDocument with group
+   ``PowerTools.PartNumber`` and name ``assigned``. Because
+   ``adsk.drawing`` does not expose a first-class ``partNumber`` property
+   and ``DataFile.description`` is read-only in the Python API, this
+   attribute is the durable source of truth for the drawing itself.
+
+2. **Source design's ``Drawing Number`` custom property** (titleblock hook)
+   — written through the MFGDM GraphQL ``setProperties`` mutation against
+   the drawing's referenced 3D design (opened silently if not already in
+   memory). A hub-configured titleblock with a binding to the source
+   component's ``Drawing Number`` custom property will auto-populate on
+   the drawing once synced. If the custom property is missing from the
+   user's hub, an actionable error (with a setup-guide link) is shown.
 """
 
 from __future__ import annotations
@@ -17,10 +28,11 @@ import traceback
 
 import adsk.core
 import adsk.drawing
+import adsk.fusion
 
 from ... import config
 from ...lib import fusionAddInUtils as futil
-from ..partnumber_shared import hub_fs, pn_cache, schemes
+from ..partnumber_shared import hub_fs, mfgdm_props, pn_cache, schemes
 
 
 app = adsk.core.Application.get()
@@ -51,6 +63,17 @@ INPUT_INFO = "ad_info"
 ATTR_GROUP = "PowerTools.PartNumber"
 ATTR_NAME = "assigned"
 DRAWING_PREFIX = schemes.DRAWING_PREFIX  # "DWG"
+
+# Name of the MFGDM custom property on the source design's root component
+# that the titleblock is configured to read. Must match the property's name
+# in the hub's Custom Properties collection exactly.
+DRAWING_NUMBER_PROPERTY_NAME = "Drawing Number"
+
+# URL of the setup guide for the 'Drawing Number' custom property. Shown
+# as a clickable link in the error dialog when the property is missing
+# from the user's hub. Replace with the real documentation URL when it is
+# published.
+DRAWING_NUMBER_SETUP_URL = "https://example.com/drawing-number-setup"
 
 local_handlers: list = []
 
@@ -262,6 +285,14 @@ def command_execute(args: adsk.core.CommandEventArgs):
         except Exception as exc:
             stamp_errors.append(f"attribute write: {exc}")
 
+        # Best-effort: sync the drawing number into the source design's
+        # 'Drawing Number' custom property so the titleblock can pull it
+        # automatically. Failures here do NOT invalidate the drawing stamp
+        # — the drawing-attribute record above is the canonical local
+        # record. Missing-custom-property returns an HTML-formatted error
+        # with a setup-guide link.
+        sync_deferred_html = _sync_drawing_number_to_source_design(doc, number_str)
+
         if stamp_errors:
             deferred_error = (
                 f"Drawing number {number_str} reserved in Pn-Cache, "
@@ -274,6 +305,12 @@ def command_execute(args: adsk.core.CommandEventArgs):
                 f"{CMD_NAME}: assigned {number_str} "
                 f"(cache v{result.new_version_number}, retries={result.retries_used})"
             )
+
+        # Merge the titleblock-sync error, if any, into the deferred error.
+        if sync_deferred_html:
+            deferred_error = (
+                (deferred_error + "<br/><br/>") if deferred_error else ""
+            ) + sync_deferred_html
 
     except pn_cache.PnCacheError as exc:
         deferred_error = f"Pn-Cache error:\n\n{exc}"
@@ -332,6 +369,142 @@ def _current_user_id() -> str:
     except Exception:
         pass
     return ""
+
+
+# ---------------------------------------------------------------------------
+# Titleblock sync — writes the drawing number into the source design's
+# 'Drawing Number' custom property via MFGDM GraphQL.
+# ---------------------------------------------------------------------------
+
+
+def _sync_drawing_number_to_source_design(
+    drawing_doc: adsk.drawing.DrawingDocument,
+    number_str: str,
+) -> str:
+    """Best-effort write-through to the source design's 'Drawing Number'
+    custom property. Returns an HTML error string on failure (to be shown
+    after the dialog closes), or an empty string on success / no-op.
+
+    Rules:
+      * Fusion drawings reference at most one 3D design — we use the first
+        DocumentReference only.
+      * If the source design isn't already open, open it with
+        ``visible=False`` and close it after we're done.
+      * Missing ``Drawing Number`` custom property returns a user-actionable
+        HTML error with a link to the setup guide; every other failure is
+        surfaced as a short plain-text warning.
+      * The drawing stamp on this document has already succeeded by the
+        time this runs — sync failure never invalidates it.
+    """
+    refs = drawing_doc.documentReferences
+    if refs is None or refs.count == 0:
+        futil.log(
+            f"{CMD_NAME}: drawing has no source-design reference; "
+            f"skipping titleblock sync."
+        )
+        return ""
+
+    # Fusion guarantees a drawing references at most one 3D design.
+    ref = refs.item(0)
+    source_data_file = ref.dataFile
+    source_doc = ref.referencedDocument
+    opened_by_us = False
+
+    try:
+        if source_doc is None:
+            futil.log(
+                f"{CMD_NAME}: source design "
+                f"{getattr(source_data_file, 'name', '?')!r} not open — "
+                f"opening silently for titleblock sync."
+            )
+            try:
+                source_doc = app.documents.open(source_data_file, False)
+                opened_by_us = True
+            except Exception as exc:
+                futil.log(f"{CMD_NAME}: silent open failed: {exc}")
+                return (
+                    f"Titleblock sync skipped: could not open the source "
+                    f"design ({exc})."
+                )
+
+        if source_doc is None:
+            return "Titleblock sync skipped: source design unavailable."
+
+        source_design = adsk.fusion.Design.cast(
+            source_doc.products.itemByProductType("DesignProductType")
+        )
+        if source_design is None:
+            return "Titleblock sync skipped: source document has no Design product."
+
+        try:
+            model_id = source_design.rootDataComponent.mfgdmModelId or ""
+        except Exception:
+            model_id = ""
+        if not model_id:
+            return (
+                "Titleblock sync skipped: source design has no MFGDM model "
+                "id yet (cloud metadata not ready). Save the source design "
+                "and retry."
+            )
+
+        try:
+            new_value = mfgdm_props.set_component_custom_property(
+                model_id=model_id,
+                property_name=DRAWING_NUMBER_PROPERTY_NAME,
+                value=number_str,
+            )
+        except mfgdm_props.PropertyNotFoundError:
+            futil.log(
+                f"{CMD_NAME}: source design is missing "
+                f"{DRAWING_NUMBER_PROPERTY_NAME!r} custom property."
+            )
+            return _missing_custom_property_html()
+        except mfgdm_props.MfgdmPropsError as exc:
+            futil.log(f"{CMD_NAME}: MFGDM setProperties failed: {exc}")
+            return f"Titleblock sync failed: {exc}"
+        except Exception:
+            tb = traceback.format_exc()
+            futil.log(f"{CMD_NAME}: titleblock sync exception:\n{tb}")
+            return f"Titleblock sync failed unexpectedly — see the Text Commands log."
+
+        futil.log(
+            f"{CMD_NAME}: wrote {DRAWING_NUMBER_PROPERTY_NAME!r} = "
+            f"{new_value!r} on source design "
+            f"{getattr(source_data_file, 'name', '?')!r}."
+        )
+        return ""
+    finally:
+        # Close the source design if we opened it — regardless of outcome.
+        if opened_by_us and source_doc is not None:
+            try:
+                source_doc.close(False)
+                futil.log(
+                    f"{CMD_NAME}: closed silently-opened source design."
+                )
+            except Exception as exc:
+                futil.log(
+                    f"{CMD_NAME}: failed to close silently-opened source "
+                    f"design: {exc}"
+                )
+
+
+def _missing_custom_property_html() -> str:
+    """HTML error body shown when the source design lacks the 'Drawing
+    Number' custom property. Includes a clickable setup-guide link.
+    """
+    prop = DRAWING_NUMBER_PROPERTY_NAME
+    url = DRAWING_NUMBER_SETUP_URL
+    return (
+        f"<b>⚠ Titleblock sync skipped.</b><br/><br/>"
+        f"The drawing number was assigned successfully on this drawing, "
+        f"but the source 3D design is missing the "
+        f"<b>{prop!r}</b> custom property — so the titleblock cannot "
+        f"auto-populate from the source component.<br/><br/>"
+        f"To enable titleblock auto-population, add a <b>{prop}</b> "
+        f"custom property to your hub's Custom Properties collection, "
+        f"then re-run this command.<br/><br/>"
+        f"Setup guide: <a href=\"{url}\">{url}</a>"
+    )
 
 
 def command_destroy(args: adsk.core.CommandEventArgs):

@@ -69,7 +69,7 @@ Added to the **Tools** tab **Power Tools** panel. Requires a saved design and an
 
 #### [Assign Drawing Number](./docs/Assign%20Drawing%20Number.md)
 
-Reserves the next `DWG-NNNNNN` from the same hub Pn-Cache and stamps it on the active 2D drawing as a durable Fusion Attribute (group `PowerTools.PartNumber`, name `assigned`). A future command will read that attribute to stamp the number into the drawing titleblock.
+Reserves the next `DWG-NNNNNN` from the same hub Pn-Cache and writes it in two places: as a durable Fusion Attribute on the drawing (group `PowerTools.PartNumber`, name `assigned`) and into the source design's root component `Drawing Number` custom property via the MFGDM GraphQL `setProperties` mutation — opening the source design silently in the background if it isn't already loaded. Titleblocks bound to the `Drawing Number` custom property auto-populate on the next regenerate, so no manual titleblock edits are required. If the source design lacks the custom property, a post-close warning with a clickable setup-guide link is shown while the drawing-side stamp still succeeds.
 
 Added to the Drawing workspace's **Document** tab in a dedicated **Power Tools** panel. Requires a saved drawing and an `Assets` project in the active hub.
 
@@ -134,7 +134,7 @@ C4Context
 | `commands/docinfo/` | Document Information | Design workspace → Tools tab → Power Tools panel |
 | `commands/docopen/` | Show In Location | Automatic – no UI control |
 | `commands/favorites/` | Favorites | QAT dropdown |
-| `commands/partnumber_shared/` | *(shared utilities)* | Used by Assign Part Numbers and Assign Drawing Number — schemes, intent detection, hub filesystem navigation, and Pn-Cache optimistic-retry |
+| `commands/partnumber_shared/` | *(shared utilities)* | Used by Assign Part Numbers and Assign Drawing Number — schemes, intent detection, hub filesystem navigation, Pn-Cache optimistic-retry, and MFGDM GraphQL custom-property helpers |
 | `commands/versiondiff/` | Version Diff | Design workspace → Tools tab → Power Tools panel |
 
 ---
