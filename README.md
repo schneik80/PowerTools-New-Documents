@@ -99,7 +99,7 @@ Added to the **Tools** tab **Power Tools** panel. Requires a saved design with t
 
 #### [Show In Location](./docs/Show%20In%20Location.md)
 
-Automatically runs Fusion's built-in Show In Location command whenever a design document is opened or you switch document tabs, keeping the Data Panel synchronized with the active document at all times. Requires no user interaction.
+Automatically runs Fusion's built-in Show In Location command whenever a design document is opened or you switch document tabs, keeping the Data Panel synchronized with the active document at all times. Requires no user interaction. Can be controled from the file menu Power Tools settings. This allos show in location to be disabled and eabled quickly. 
 
 ---
 
