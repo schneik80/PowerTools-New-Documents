@@ -4,6 +4,7 @@
 from .assigndrawingnumber import entry as assigndrawingnumber
 from .assignpartnumbers import entry as assignpartnumbers
 from .autosave import entry as autosave
+from .changeactivecolor import entry as changeactivecolor
 from .datatoggle import entry as datatoggle
 from .defaultfolders import entry as defaultfolders
 from .dochistory import entry as dochistory
@@ -17,6 +18,7 @@ commands = [
     assigndrawingnumber,
     assignpartnumbers,
     autosave,
+    changeactivecolor,
     datatoggle,
     defaultfolders,
     dochistory,

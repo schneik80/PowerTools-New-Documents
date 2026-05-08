@@ -35,6 +35,16 @@ Adds a **History** button to the Quick Access Toolbar that opens the active docu
 
 ---
 
+### Component tools
+
+#### [Set Component Color](./docs/Set%20Component%20Color.md)
+
+Selection-driven command that writes Fusion's per-component `Component.componentColor` (the value read by **View → Color Cycling Toggle**) on every selected component. Presents a 34-color palette sourced live from Fusion's built-in `ColorCycleTable` in `RiverRubicon.xml`, sorted into a rainbow, plus a **Custom color…** button that invokes the OS-native color picker (NSColorPanel via `osascript` on macOS; `tkinter.colorchooser` in a fresh subprocess on Windows).
+
+Available from the **right-click context menu** on any component node in the browser (including the root). Inserts directly after Fusion's built-in **Cycle Component Color** entry. Requires a non-empty Component/Occurrence selection.
+
+---
+
 ### Project tools
 
 #### [Add Default Project Folders](./docs/Default%20Folders.md)
@@ -128,6 +138,7 @@ C4Context
 | `commands/assigndrawingnumber/` | Assign Drawing Number | Drawing workspace → Document tab → Power Tools panel |
 | `commands/assignpartnumbers/` | Assign Part Numbers | Design workspace → Tools tab → Power Tools panel |
 | `commands/autosave/` | Local Recovery Save | QAT → File dropdown |
+| `commands/changeactivecolor/` | Set Component Color | Browser right-click context menu on a Component or Occurrence (after Cycle Component Color) |
 | `commands/datatoggle/` | Toggle Data Pane | Navigation Toolbar |
 | `commands/defaultfolders/` | Add Default Project Folders | QAT → File dropdown |
 | `commands/dochistory/` | Document History | QAT |
