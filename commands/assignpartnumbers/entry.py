@@ -414,7 +414,7 @@ def command_input_changed(args: adsk.core.InputChangedEventArgs):
     try:
         _recompute_previews(args.inputs)
     except Exception:
-        futil.log(f"Error recomputing previews:\n{traceback.format_exc()}")
+        futil.handle_error(f"{CMD_NAME} recompute previews")
 
 
 def command_validate_inputs(args: adsk.core.ValidateInputsEventArgs):
@@ -428,7 +428,7 @@ def command_validate_inputs(args: adsk.core.ValidateInputsEventArgs):
         choices = _collect_choices(args.inputs)
         args.areInputsValid = any(prefix is not None for _t, prefix in choices)
     except Exception:
-        futil.log(f"validateInputs failure:\n{traceback.format_exc()}")
+        futil.handle_error(f"{CMD_NAME} validateInputs")
         args.areInputsValid = True  # fail-open so we don't block forever
 
 

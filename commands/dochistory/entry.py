@@ -2,7 +2,7 @@
 # Copyright (C) 2022-2026 IMA LLC
 
 import adsk.core, adsk.fusion
-import os, time, traceback
+import os, time
 from ...lib import fusionAddInUtils as futil
 from ... import config
 
@@ -83,13 +83,7 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
             return
 
         # Check that the active document has been saved.
-        if not app.activeDocument.isSaved:
-            ui.messageBox(
-                "The active document must be saved before you can continue.",
-                "Please Save",
-                0,
-                2,
-            )
+        if not futil.isSaved():
             return
 
         # set design as the active workspace
@@ -111,8 +105,7 @@ def command_execute(args: adsk.core.CommandCreatedEventArgs):
         showHistory.execute()
 
     except:
-        if ui:
-            ui.messageBox("Failed:\n{}".format(traceback.format_exc()))
+        futil.handle_error(CMD_NAME, show_message_box=True)
 
 
 # This function will be called when the user completes the command.

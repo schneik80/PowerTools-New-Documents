@@ -463,8 +463,7 @@ def _sync_drawing_number_to_source_design(
             futil.log(f"{CMD_NAME}: MFGDM setProperties failed: {exc}")
             return f"Titleblock sync failed: {exc}"
         except Exception:
-            tb = traceback.format_exc()
-            futil.log(f"{CMD_NAME}: titleblock sync exception:\n{tb}")
+            futil.handle_error(f"{CMD_NAME} titleblock sync")
             return f"Titleblock sync failed unexpectedly — see the Text Commands log."
 
         futil.log(
