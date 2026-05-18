@@ -3,7 +3,6 @@
 
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Optional
 
 
 @dataclass
@@ -41,8 +40,8 @@ class DiffEntry:
     name: str
     feature_type: str
     status: str  # "newer" | "deleted" | "unchanged" | "version_changed"
-    baseline_index: Optional[int]
-    compare_index: Optional[int]
+    baseline_index: int | None
+    compare_index: int | None
     detail: str = ""  # Extra info, e.g. version change description for XREFs
 
 
@@ -53,8 +52,8 @@ class AlignedRow:
     Each row has an older side and a newer side. One side may be None
     when a feature only exists in one version.
     """
-    older: Optional[TimelineFeature]
-    newer: Optional[TimelineFeature]
+    older: TimelineFeature | None
+    newer: TimelineFeature | None
     status: str  # "newer" | "deleted" | "unchanged" | "version_changed" | "sketch_modified" | "params_changed" | "health_changed"
     detail: str = ""  # Extra info for version_changed rows
     sketch_detail: str = ""  # Count delta summary for sketch_modified rows
@@ -73,6 +72,10 @@ class DiffResult:
     older_is_comparison: bool = True  # True when comparison is older than baseline
     baseline_properties: object = None   # Optional[DesignProperties]
     comparison_properties: object = None # Optional[DesignProperties]
+    # Multi-version edit history (populated by versionmerge command only;
+    # versiondiff leaves these empty so its existing flow is unchanged).
+    feature_histories: dict = field(default_factory=dict)  # {feature_key tuple: FeatureHistory}
+    intermediate_versions: list = field(default_factory=list)  # [VersionInfo] strictly between compare and baseline
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), indent=2, default=str)

@@ -5,7 +5,6 @@ import adsk.core
 import os
 import os.path
 import json
-from .lib import fusionAddInUtils as futil
 
 DEBUG = False
 ADDIN_NAME = os.path.basename(os.path.dirname(__file__))
@@ -43,7 +42,7 @@ def load_settings() -> dict:
     if not os.path.exists(SETTINGS_FILE):
         return {}
     try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+        with open(SETTINGS_FILE, encoding="utf-8") as f:
             data = json.load(f)
         return data if isinstance(data, dict) else {}
     except Exception:

@@ -480,6 +480,232 @@ HTML_CSS = """<style>
 """
 
 
+THEME_CSS = """<style>
+    /* ------------------------------------------------------------------
+     * Theme tokens
+     *
+     * Fusion is dark by default, so the :root values are the dark theme
+     * and html[data-theme="light"] overrides them. The Python-side
+     * `_fusion_theme()` helper bakes the active theme directly into the
+     * <html> tag at report-generation time — there's no JS bridge in the
+     * QTWebBrowser.Display surface used by the diff report.
+     * ------------------------------------------------------------------ */
+    :root {
+        --bg-page:         #1e2838;
+        --bg-surface:      #2a3442;
+        --bg-surface-2:    #242e39;
+        --bg-divider:      #1f2832;
+        --bg-input:        #1e2838;
+
+        --header-bg:       #1a1a2e;
+        --header-text:     #ffffff;
+        --header-subtle:   #b2bec3;
+
+        --text:            #e0e6ec;
+        --text-strong:     #ffffff;
+        --text-muted:      #8a9bb0;
+        --text-faint:      #5c6f84;
+
+        --border:          #3d4f66;
+        --border-soft:     #2a3442;
+
+        --accent:          #0696d7;
+        --accent-soft:     rgba(9, 132, 227, 0.18);
+        --older-soft:      rgba(108, 92, 231, 0.18);
+
+        --status-newer-bg:    #1e3a2e;  --status-newer-text:    #74c69d;
+        --status-deleted-bg:  #3a1e1e;  --status-deleted-text:  #e88a8a;
+        --status-version-bg:  #3a3220;  --status-version-text:  #e0c878;
+        --status-sketch-bg:   #3a2e1e;  --status-sketch-text:   #e8b87a;
+        --status-params-bg:   #1e2a3a;  --status-params-text:   #74b3d4;
+        --status-health-bg:   #3a2920;  --status-health-text:   #ed9c5a;
+        --status-unchanged-bg:#2c333d;  --status-unchanged-text:#95a5a6;
+
+        --row-newer:       #243a2e;
+        --row-deleted:     #3a2424;
+        --row-version:     #3a3324;
+        --row-sketch:      #3a2e24;
+        --row-params:      #243044;
+        --row-health:      #3a2c24;
+    }
+    html[data-theme="light"] {
+        --bg-page:         #f5f6fa;
+        --bg-surface:      #ffffff;
+        --bg-surface-2:    #f8f9fa;
+        --bg-divider:      #fafafa;
+        --bg-input:        #ffffff;
+
+        --header-bg:       #1a1a2e;
+        --header-text:     #ffffff;
+        --header-subtle:   #b2bec3;
+
+        --text:            #2d3436;
+        --text-strong:     #1a1a1a;
+        --text-muted:      #636e72;
+        --text-faint:      #95a5a6;
+
+        --border:          #e6eaef;
+        --border-soft:     #f0f0f0;
+
+        --accent:          #0984e3;
+        --accent-soft:     #eef6ff;
+        --older-soft:      #f3f0ff;
+
+        --status-newer-bg:    #d4edda;  --status-newer-text:    #155724;
+        --status-deleted-bg:  #f8d7da;  --status-deleted-text:  #721c24;
+        --status-version-bg:  #fff3cd;  --status-version-text:  #856404;
+        --status-sketch-bg:   #fde8d0;  --status-sketch-text:   #8a4b08;
+        --status-params-bg:   #d6eaf8;  --status-params-text:   #1a5276;
+        --status-health-bg:   #ffe0b2;  --status-health-text:   #e65100;
+        --status-unchanged-bg:#e2e3e5;  --status-unchanged-text:#383d41;
+
+        --row-newer:       #ecfaee;
+        --row-deleted:     #fdedee;
+        --row-version:     #fffde7;
+        --row-sketch:      #fef5eb;
+        --row-params:      #ebf5fb;
+        --row-health:      #fff3e0;
+    }
+
+    /* ------------------------------------------------------------------
+     * Overrides on the shared HTML_CSS so the diff report honours the
+     * theme tokens. !important is needed because HTML_CSS sets explicit
+     * colours that we want to defeat.
+     * ------------------------------------------------------------------ */
+    body {
+        background: var(--bg-page) !important;
+        color: var(--text) !important;
+    }
+    .report-header {
+        background: var(--header-bg) !important;
+        color: var(--header-text) !important;
+    }
+    .report-header .subtitle { color: var(--header-subtle) !important; }
+
+    .version-card { background: var(--bg-surface) !important; }
+    .version-card .detail { color: var(--text-muted) !important; }
+    .version-card .detail b { color: var(--text) !important; }
+    .card-thumb {
+        background: var(--bg-surface-2) !important;
+        border-color: var(--border) !important;
+    }
+
+    /* Filter badges — use status token pairs for theme parity */
+    .filter-badge-newer           { background: var(--status-newer-bg)     !important; color: var(--status-newer-text)     !important; }
+    .filter-badge-deleted         { background: var(--status-deleted-bg)   !important; color: var(--status-deleted-text)   !important; }
+    .filter-badge-unchanged       { background: var(--status-unchanged-bg) !important; color: var(--status-unchanged-text) !important; }
+    .filter-badge-version_changed { background: var(--status-version-bg)   !important; color: var(--status-version-text)   !important; }
+    .filter-badge-sketch_modified { background: var(--status-sketch-bg)    !important; color: var(--status-sketch-text)    !important; }
+    .filter-badge-params_changed  { background: var(--status-params-bg)    !important; color: var(--status-params-text)    !important; }
+    .filter-badge-health_changed  { background: var(--status-health-bg)    !important; color: var(--status-health-text)    !important; }
+
+    .diff-table-wrap { background: var(--bg-surface) !important; }
+    .diff-table-wrap h2 {
+        color: var(--text) !important;
+        border-color: var(--border) !important;
+    }
+    .table-summary { color: var(--text-muted) !important; }
+
+    table.diff-table th {
+        background: var(--bg-surface-2) !important;
+        color: var(--text-muted) !important;
+        border-color: var(--border) !important;
+    }
+    table.diff-table td {
+        border-color: var(--border-soft) !important;
+        color: var(--text) !important;
+    }
+    table.diff-table tr { background: var(--bg-surface); }
+
+    th.col-older { background: var(--older-soft) !important; color: var(--text-strong) !important; }
+    th.col-newer { background: var(--accent-soft) !important; color: var(--text-strong) !important; }
+    td.col-divider, th.col-divider {
+        background: var(--bg-divider) !important;
+        border-left-color: var(--border) !important;
+        border-right-color: var(--border) !important;
+    }
+    td.empty-cell { background: var(--bg-surface-2) !important; }
+
+    /* Row status tints — divider cell */
+    tr.row-newer td.col-divider           { background: var(--row-newer)   !important; }
+    tr.row-deleted td.col-divider         { background: var(--row-deleted) !important; }
+    tr.row-unchanged td.col-divider       { background: var(--bg-divider)  !important; }
+    tr.row-version_changed td.col-divider { background: var(--row-version) !important; }
+    tr.row-sketch_modified td.col-divider { background: var(--row-sketch)  !important; }
+    tr.row-params_changed td.col-divider  { background: var(--row-params)  !important; }
+    tr.row-health_changed td.col-divider  { background: var(--row-health)  !important; }
+
+    /* Row status tints — newer/older side cells */
+    tr.row-newer td.newer-name,
+    tr.row-newer td.newer-type,
+    tr.row-newer td.newer-idx { background: var(--row-newer) !important; }
+    tr.row-deleted td.older-name,
+    tr.row-deleted td.older-type,
+    tr.row-deleted td.older-idx { background: var(--row-deleted) !important; }
+    tr.row-version_changed td.newer-idx,
+    tr.row-version_changed td.newer-name,
+    tr.row-version_changed td.newer-type { background: var(--row-version) !important; }
+    tr.row-sketch_modified td.newer-name,
+    tr.row-sketch_modified td.newer-type,
+    tr.row-sketch_modified td.newer-idx { background: var(--row-sketch) !important; }
+    tr.row-params_changed td.newer-name,
+    tr.row-params_changed td.newer-type,
+    tr.row-params_changed td.newer-idx { background: var(--row-params) !important; }
+    tr.row-health_changed td.newer-name,
+    tr.row-health_changed td.newer-type,
+    tr.row-health_changed td.newer-idx { background: var(--row-health) !important; }
+
+    /* Status badges */
+    .status-newer       { background: var(--status-newer-bg)     !important; color: var(--status-newer-text)     !important; }
+    .status-deleted     { background: var(--status-deleted-bg)   !important; color: var(--status-deleted-text)   !important; }
+    .status-unchanged   { background: var(--status-unchanged-bg) !important; color: var(--status-unchanged-text) !important; }
+    .status-version_changed { background: var(--status-version-bg) !important; color: var(--status-version-text) !important; }
+    .status-sketch_modified { background: var(--status-sketch-bg)  !important; color: var(--status-sketch-text)  !important; }
+    .status-params_changed  { background: var(--status-params-bg)  !important; color: var(--status-params-text)  !important; }
+    .status-health_changed  { background: var(--status-health-bg)  !important; color: var(--status-health-text)  !important; }
+
+    /* Detail spans embedded in cells */
+    .params-detail  { color: var(--status-params-text)  !important; }
+    .sketch-detail  { color: var(--status-sketch-text)  !important; }
+    .health-detail  { color: var(--status-health-text)  !important; }
+    .version-detail { color: var(--status-version-text) !important; }
+
+    /* Design Properties table */
+    .props-table-wrap { background: var(--bg-surface) !important; }
+    .props-table-wrap h2 {
+        color: var(--text) !important;
+        border-color: var(--border) !important;
+    }
+    table.props-table th {
+        background: var(--bg-surface-2) !important;
+        color: var(--text-muted) !important;
+        border-color: var(--border) !important;
+    }
+    table.props-table th.prop-col-older { background: var(--older-soft) !important; color: var(--text-strong) !important; }
+    table.props-table th.prop-col-newer { background: var(--accent-soft) !important; color: var(--text-strong) !important; }
+    table.props-table td {
+        border-color: var(--border-soft) !important;
+        color: var(--text) !important;
+    }
+    table.props-table td.prop-label {
+        background: var(--bg-surface-2) !important;
+        color: var(--text-muted) !important;
+    }
+    table.props-table td.prop-changed {
+        background: var(--row-sketch) !important;
+        color: var(--text) !important;
+    }
+
+    /* Visual timeline container — SVG colours inside stay semantic */
+    .visual-timeline-wrap { background: var(--bg-surface) !important; }
+    .visual-timeline-wrap h2 { color: var(--text) !important; }
+
+    /* Footer */
+    .report-footer { color: var(--text-faint) !important; }
+</style>
+"""
+
+
 def _escape_html(text: str) -> str:
     """Escape HTML special characters."""
     return (
@@ -613,7 +839,7 @@ def _build_properties_table(diff_result: DiffResult) -> str:
         w = abs(bbox_max[0] - bbox_min[0])
         h = abs(bbox_max[1] - bbox_min[1])
         d = abs(bbox_max[2] - bbox_min[2])
-        return f"{_fmt(w, decimals)} × {_fmt(h, decimals)} × {_fmt(d, decimals)}"
+        return f"{_fmt(w, decimals)} × {_fmt(h, decimals)} × {_fmt(d, decimals)}"  # noqa: RUF001
 
     def _row(label, older_val, newer_val, unit=""):
         """Build a table row, highlighting only the newer column if values differ."""
@@ -644,7 +870,7 @@ def _build_properties_table(diff_result: DiffResult) -> str:
     rows.append(_row("Area", _fmt(op.area, 3), _fmt(np_.area, 3), "cm²"))
     rows.append(_row("Density", _fmt(op.density, 6), _fmt(np_.density, 6), "kg/cm³"))
     rows.append(_row("Center of Mass", _fmt_tuple(op.center_of_mass, 4), _fmt_tuple(np_.center_of_mass, 4), "cm"))
-    rows.append(_row("Extents (W × H × D)",
+    rows.append(_row("Extents (W × H × D)",  # noqa: RUF001
                      _extents(op.bbox_min, op.bbox_max),
                      _extents(np_.bbox_min, np_.bbox_max), "cm"))
 
@@ -822,13 +1048,13 @@ def _build_visual_timeline(diff_result: DiffResult) -> str:
             )
 
     # ── Gutter strips ──
-    for pos, (ar_idx, feat, status) in enumerate(newer_items):
+    for pos, (_ar_idx, _feat, status) in enumerate(newer_items):
         fill, _, _, _ = _color(status)
         parts.append(
             f'<rect x="{bx(pos)}" y="{_GUTTER_Y_NEWER}" width="{_BOX}" height="{_GUTTER}" '
             f'fill="{fill}" rx="1"/>'
         )
-    for pos, (ar_idx, feat, status) in enumerate(older_items):
+    for pos, (_ar_idx, _feat, status) in enumerate(older_items):
         fill, _, _, _ = _color(status)
         parts.append(
             f'<rect x="{bx(pos)}" y="{_GUTTER_Y_OLDER}" width="{_BOX}" height="{_GUTTER}" '
@@ -836,7 +1062,7 @@ def _build_visual_timeline(diff_result: DiffResult) -> str:
         )
 
     # ── Feature boxes with feature-type icons and tooltips ──
-    _icon_size = 14  # icon rendered at 14×14 centered in the 27×27 box
+    _icon_size = 14  # icon rendered at 14x14 centered in the 27x27 box
     _icon_pad = (_BOX - _icon_size) / 2
 
     def _draw_box(pos, feat, status, row_y):
@@ -861,9 +1087,9 @@ def _build_visual_timeline(diff_result: DiffResult) -> str:
         box += f'<title>{tooltip}</title></g>'
         return box
 
-    for pos, (ar_idx, feat, status) in enumerate(newer_items):
+    for pos, (_ar_idx, feat, status) in enumerate(newer_items):
         parts.append(_draw_box(pos, feat, status, _ROW_Y_NEWER))
-    for pos, (ar_idx, feat, status) in enumerate(older_items):
+    for pos, (_ar_idx, feat, status) in enumerate(older_items):
         parts.append(_draw_box(pos, feat, status, _ROW_Y_OLDER))
 
     svg_content = "\n    ".join(parts)
@@ -1060,15 +1286,23 @@ def _build_two_column_table(diff_result: DiffResult) -> str:
 </div>"""
 
 
-def generate_html_report(diff_result: DiffResult) -> str:
+def generate_html_report(diff_result: DiffResult, theme: str = "dark") -> str:
     """Generate a complete HTML diff report and save to a temp file.
 
     Args:
         diff_result: The complete DiffResult to render.
+        theme: Fusion UI theme — 'dark' or 'light'. Baked directly into
+            the <html> tag's data-theme attribute so the THEME_CSS token
+            block resolves at render time. The diff report is displayed in
+            Fusion's QTWebBrowser.Display surface, which has no JS bridge,
+            so theme is one-shot at generation. Any value other than
+            'dark' or 'light' falls back to 'dark'.
 
     Returns:
         POSIX-style path to the generated HTML file.
     """
+    if theme not in ("dark", "light"):
+        theme = "dark"
     doc_name = _escape_html(diff_result.baseline.name)
 
     # Cards ordered left=older, right=newer to match the table columns
@@ -1106,11 +1340,12 @@ function applyFilters() {
 </script>"""
 
     html = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{theme}">
 <head>
     <meta charset="UTF-8">
     <title>{doc_name} - Version Diff Report</title>
     {HTML_CSS}
+    {THEME_CSS}
 </head>
 <body>
     <div class="report-header">

@@ -9,7 +9,10 @@
 #  AUTODESK, INC. DOES NOT WARRANT THAT THE OPERATION OF THE PROGRAM WILL BE
 #  UNINTERRUPTED OR ERROR FREE.
 
-import os, subprocess
+import datetime
+import os
+import subprocess
+import tempfile
 import traceback
 import adsk.core
 
@@ -25,30 +28,62 @@ except:
     DEBUG = False
 
 
+# File log that you can tail or open in Console.app — useful when no IDE
+# debugger is attached, since `print()` goes to a dev null otherwise.
+LOG_FILE_PATH = os.path.join(tempfile.gettempdir(), "powertools_doctools.log")
+
+
+def _append_to_file_log(message: str, level_name: str) -> None:
+    try:
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        with open(LOG_FILE_PATH, "a", encoding="utf-8") as fh:
+            fh.write(f"[{ts}] {level_name}: {message}\n")
+    except Exception:
+        pass
+
+
 def log(
     message: str,
     level: adsk.core.LogLevels = adsk.core.LogLevels.InfoLogLevel,
     force_console: bool = False,
 ):
-    """Utility function to easily handle logging in your app.
+    """Log a message to every channel we have access to.
+
+    - stdout (only visible when an IDE debugger is attached)
+    - /tmp/powertools_doctools.log (tail-able / openable in Console.app)
+    - Fusion's TEXT COMMANDS palette (View → Show Text Commands)
+    - Fusion's log file for errors
 
     Arguments:
-    message -- The message to log.
-    level -- The logging severity level.
-    force_console -- Forces the message to be written to the Text Command window.
+        message: The message to log.
+        level: The logging severity level.
+        force_console: Retained for backwards-compatibility; ignored now that
+            every message is already written to the Text Command window.
     """
-    # Always print to console, only seen through IDE.
+    # 1) stdout — only seen through an attached IDE
     print(message)
 
-    # Log all errors to Fusion log file.
-    if level == adsk.core.LogLevels.ErrorLogLevel:
-        log_type = adsk.core.LogTypes.FileLogType
-        app.log(message, level, log_type)
+    # 2) tail-able file log
+    try:
+        level_name = (
+            "ERROR" if level == adsk.core.LogLevels.ErrorLogLevel else "INFO"
+        )
+    except Exception:
+        level_name = "INFO"
+    _append_to_file_log(message, level_name)
 
-    # If config.DEBUG is True write all log messages to the console.
-    if DEBUG or force_console:
-        log_type = adsk.core.LogTypes.ConsoleLogType
-        app.log(message, level, log_type)
+    # 3) Fusion TEXT COMMANDS palette — every message, every time
+    try:
+        app.log(message, level, adsk.core.LogTypes.ConsoleLogType)
+    except Exception:
+        pass
+
+    # 4) Fusion log file — errors only
+    if level == adsk.core.LogLevels.ErrorLogLevel:
+        try:
+            app.log(message, level, adsk.core.LogTypes.FileLogType)
+        except Exception:
+            pass
 
 
 def clipText(linkText):

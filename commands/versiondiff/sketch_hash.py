@@ -9,7 +9,6 @@ consisting of revisionId (primary change detector) and element counts
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 import adsk.fusion
 
@@ -36,7 +35,7 @@ class SketchFingerprint:
     is_fully_constrained: bool
 
 
-def extract_sketch_fingerprint(entity) -> Optional[SketchFingerprint]:
+def extract_sketch_fingerprint(entity) -> SketchFingerprint | None:
     """Extract a fingerprint from a live Sketch entity.
 
     Must be called while the document containing the sketch is open.

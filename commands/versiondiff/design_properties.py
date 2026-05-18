@@ -8,7 +8,6 @@ versions before drilling into the timeline feature comparison.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 import adsk.core
 import adsk.fusion
@@ -29,17 +28,17 @@ class DesignProperties:
     volume: float = 0.0     # cm³
     area: float = 0.0       # cm²
     density: float = 0.0    # kg/cm³
-    center_of_mass: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    center_of_mass: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
     # Bounding box
-    bbox_min: Tuple[float, float, float] = (0.0, 0.0, 0.0)
-    bbox_max: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    bbox_min: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    bbox_max: tuple[float, float, float] = (0.0, 0.0, 0.0)
 
     # Body count
     body_count: int = 0
 
 
-def extract_design_properties(design: adsk.fusion.Design) -> Optional[DesignProperties]:
+def extract_design_properties(design: adsk.fusion.Design) -> DesignProperties | None:
     """Extract properties from a live Fusion design.
 
     Must be called while the document is open.  All reads are fast

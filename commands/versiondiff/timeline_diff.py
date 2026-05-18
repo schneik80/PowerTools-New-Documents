@@ -1,14 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2022-2026 IMA LLC
 
-import json
 import os
 import re
 import secrets
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import adsk.core
 import adsk.fusion
@@ -109,23 +107,29 @@ def walk_timeline(timeline: adsk.fusion.Timeline) -> list:
 def get_version_info(data_file: adsk.core.DataFile) -> VersionInfo:
     """Extract version metadata from a Fusion DataFile.
 
-    Args:
-        data_file: The DataFile to read version info from.
-
-    Returns:
-        VersionInfo dataclass instance.
+    Each DataFile property is read defensively — Fusion's hub-metadata
+    accessors transiently raise InternalValidationError when the data
+    isn't fully loaded, and an empty string is fine for display.
     """
+    def _get(getter, default=None):
+        try:
+            return getter()
+        except Exception:
+            return default
+
     date_str = ""
-    if data_file.dateModified:
-        date_str = datetime.fromtimestamp(data_file.dateModified).strftime("%Y-%m-%d %H:%M:%S")
+    dm = _get(lambda: data_file.dateModified)
+    if dm:
+        try:
+            date_str = datetime.fromtimestamp(dm).strftime("%Y-%m-%d %H:%M:%S")
+        except Exception:
+            date_str = ""
 
     updated_by = ""
-    if data_file.lastUpdatedBy:
-        updated_by = data_file.lastUpdatedBy.displayName
+    user = _get(lambda: data_file.lastUpdatedBy)
+    if user is not None:
+        updated_by = _get(lambda: user.displayName, "") or ""
 
-    # Capture thumbnail as base64-encoded PNG for embedding in the HTML report.
-    # DataFile.thumbnail returns a DataObjectFuture; .dataObject.getAsBase64String()
-    # returns the PNG already base64-encoded when state == 1 (ready).
     thumbnail_b64 = ""
     try:
         thumb_future = getattr(data_file, "thumbnail", None)
@@ -137,12 +141,12 @@ def get_version_info(data_file: adsk.core.DataFile) -> VersionInfo:
         pass
 
     return VersionInfo(
-        version_number=data_file.versionNumber,
-        version_id=data_file.versionId,
-        name=data_file.name,
+        version_number=_get(lambda: data_file.versionNumber, 0) or 0,
+        version_id=_get(lambda: data_file.versionId, "") or "",
+        name=_get(lambda: data_file.name, "") or "",
         date_modified=date_str,
         last_updated_by=updated_by,
-        description=data_file.description or "",
+        description=_get(lambda: data_file.description, "") or "",
         thumbnail_b64=thumbnail_b64,
     )
 

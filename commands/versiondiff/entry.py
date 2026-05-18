@@ -3,7 +3,10 @@
 
 import adsk.core
 import adsk.fusion
+import base64
 import os
+import secrets
+import tempfile
 import traceback
 from datetime import datetime
 
@@ -41,6 +44,84 @@ local_handlers = []
 
 # Maps dropdown item labels to DataFile objects for version selection
 _version_map = {}
+
+
+def _fusion_theme() -> str:
+    """Return 'dark' or 'light' matching Fusion's currently applied UI theme.
+
+    Uses ``activeUserInterfaceTheme`` so the "follow device OS theme" setting
+    is resolved to the actual rendered theme before comparison.  Returns
+    'dark' on any failure since Fusion's default is dark and our CSS root
+    tokens are dark.
+    """
+    try:
+        app_ = adsk.core.Application.get()
+        theme = app_.preferences.generalPreferences.activeUserInterfaceTheme
+        dark_set = {
+            adsk.core.UserInterfaceThemes.DarkBlueUserInterfaceTheme,
+            adsk.core.UserInterfaceThemes.DarkGrayUserInterfaceTheme,
+        }
+        return "dark" if theme in dark_set else "light"
+    except Exception:
+        return "dark"
+
+
+def _capture_viewport_thumbnail() -> str:
+    """Reset the active viewport to home view and save it as a transparent PNG.
+
+    Used for both the baseline and comparison version cards in the report,
+    because ``DataFile.thumbnail`` on a non-latest version often returns
+    the latest version's image. Capturing from the open document is reliable.
+    Returns the base64-encoded bytes, or "" on failure.
+    """
+    try:
+        viewport = app.activeViewport
+        if viewport is None:
+            return ""
+
+        try:
+            viewport.goHome(False)
+        except TypeError:
+            viewport.goHome()
+        try:
+            viewport.fit()
+        except Exception:
+            pass
+        viewport.refresh()
+        adsk.doEvents()
+
+        png_path = os.path.join(
+            tempfile.gettempdir(),
+            f"vdiff_thumb_{secrets.token_urlsafe(6)}.png",
+        )
+
+        try:
+            options = adsk.core.SaveImageFileOptions.create(png_path)
+            options.width = 400
+            options.height = 300
+            options.isAntiAliased = True
+            options.isBackgroundTransparent = True
+            ok = viewport.saveAsImageFileWithOptions(options)
+        except (AttributeError, RuntimeError) as exc:
+            futil.log(
+                f"{CMD_NAME}: saveAsImageFileWithOptions unavailable "
+                f"({exc}); falling back to opaque capture."
+            )
+            ok = viewport.saveAsImageFile(png_path, 400, 300)
+
+        if not ok or not os.path.exists(png_path):
+            return ""
+
+        with open(png_path, "rb") as fh:
+            data = fh.read()
+        try:
+            os.remove(png_path)
+        except Exception:
+            pass
+        return base64.b64encode(data).decode("ascii")
+    except Exception as exc:
+        futil.log(f"{CMD_NAME}: viewport thumbnail capture failed: {exc}")
+        return ""
 
 
 def start():
@@ -393,7 +474,7 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
     except Exception as e:
         futil.log(f"Error in command_created: {e}\n{traceback.format_exc()}")
-        ui.messageBox(f"Failed to initialize Version Diff:\n{str(e)}")
+        ui.messageBox(f"Failed to initialize Version Diff:\n{e!s}")
 
 
 def on_input_changed(args: adsk.core.InputChangedEventArgs):
@@ -423,6 +504,13 @@ def command_execute(args: adsk.core.CommandEventArgs):
         attach_params_to_features(baseline_features, extract_feature_params(design))
         baseline_info = get_version_info(app.activeDocument.dataFile)
         baseline_properties = extract_design_properties(design)
+
+        # Capture the baseline's viewport now (before we switch docs) for
+        # the "Newer/Current" card. Overrides whatever data_file.thumbnail
+        # returned.
+        baseline_thumb = _capture_viewport_thumbnail()
+        if baseline_thumb:
+            baseline_info.thumbnail_b64 = baseline_thumb
 
         futil.log(
             f"Baseline: V{baseline_info.version_number}, "
@@ -456,6 +544,13 @@ def command_execute(args: adsk.core.CommandEventArgs):
         compare_info = get_version_info(compare_data_file)
         compare_properties = extract_design_properties(compare_design)
 
+        # Capture the comparison's viewport while its doc is still active
+        # (Fusion's DataFile.thumbnail for an older version often returns
+        # the latest version's image).
+        compare_thumb = _capture_viewport_thumbnail()
+        if compare_thumb:
+            compare_info.thumbnail_b64 = compare_thumb
+
         futil.log(
             f"Comparison: V{compare_info.version_number}, "
             f"{len(compare_features)} timeline features"
@@ -487,7 +582,8 @@ def command_execute(args: adsk.core.CommandEventArgs):
         futil.log(f"Diff JSON saved to: {json_path}")
 
         # Generate and display HTML report
-        html_path = generate_html_report(diff_result)
+        theme = _fusion_theme()
+        html_path = generate_html_report(diff_result, theme=theme)
         futil.log(f"HTML report saved to: {html_path}")
 
         app.executeTextCommand(f"QTWebBrowser.Display file:///{html_path}")
@@ -500,16 +596,16 @@ def command_execute(args: adsk.core.CommandEventArgs):
         )
 
     except Exception as e:
-        error_msg = f"Version Diff failed: {str(e)}\n{traceback.format_exc()}"
+        error_msg = f"Version Diff failed: {e!s}\n{traceback.format_exc()}"
         futil.log(error_msg)
-        ui.messageBox(f"Version Diff failed:\n{str(e)}", CMD_NAME, 0, 3)
+        ui.messageBox(f"Version Diff failed:\n{e!s}", CMD_NAME, 0, 3)
 
     finally:
         # Ensure comparison document is closed if still open
         if compare_doc:
             try:
                 compare_doc.close(False)
-            except:
+            except Exception:
                 pass
 
 

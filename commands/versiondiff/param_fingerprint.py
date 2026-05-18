@@ -10,20 +10,19 @@ numeric values (with tolerance) to avoid false positives from
 expression formatting differences like ``"180.00 deg"`` vs ``"180 deg"``.
 """
 
-from typing import Dict, Tuple
 
 import adsk.fusion
 
 
 # Type alias: {param_name: (value, expression, role)}
-ParamEntry = Tuple[float, str, str]
-ParamDict = Dict[str, ParamEntry]
+ParamEntry = tuple[float, str, str]
+ParamDict = dict[str, ParamEntry]
 
 # Tolerance for floating-point value comparison (relative)
 _REL_TOL = 1e-9
 
 
-def extract_feature_params(design: adsk.fusion.Design) -> Dict[int, ParamDict]:
+def extract_feature_params(design: adsk.fusion.Design) -> dict[int, ParamDict]:
     """Build a mapping of timeline-index -> parameter dict for every feature.
 
     Must be called while the document is open.
@@ -35,7 +34,7 @@ def extract_feature_params(design: adsk.fusion.Design) -> Dict[int, ParamDict]:
         ``{timeline_index: {param_name: (value, expression, role), ...}, ...}``
         Features with no parameters are omitted from the dict.
     """
-    result: Dict[int, ParamDict] = {}
+    result: dict[int, ParamDict] = {}
 
     try:
         all_params = design.allParameters
@@ -65,10 +64,84 @@ def extract_feature_params(design: adsk.fusion.Design) -> Dict[int, ParamDict]:
             # Skip parameters that can't be resolved (broken refs, etc.)
             continue
 
+    # Work-geometry features (construction planes, axes, points) own parameters
+    # on their `definition` object, which is not always reached by the
+    # `parameter.createdBy.timelineObject` chain above. Walk the timeline
+    # directly and pull those.
+    try:
+        _augment_with_construction_params(design, result)
+    except Exception:
+        pass
+
     return result
 
 
-def attach_params_to_features(features: list, param_map: Dict[int, ParamDict]) -> None:
+_CONSTRUCTION_TYPES = ("ConstructionPlane", "ConstructionAxis", "ConstructionPoint")
+_DEFINITION_PARAM_ATTRS = ("offset", "angle", "distance", "length")
+
+
+def _augment_with_construction_params(
+    design: adsk.fusion.Design, result: dict[int, ParamDict]
+) -> None:
+    """Walk the timeline and pull parameters from construction-feature definitions.
+
+    Mutates ``result`` in place.  Existing entries take precedence; this only
+    fills in parameters that the standard walk didn't already discover for the
+    same timeline index.
+    """
+    try:
+        timeline = design.timeline
+    except Exception:
+        return
+
+    for i in range(timeline.count):
+        try:
+            item = timeline.item(i)
+            if item.isGroup:
+                continue
+            try:
+                entity = item.entity
+            except RuntimeError:
+                continue
+            if entity is None:
+                continue
+
+            obj_type = entity.objectType or ""
+            type_name = obj_type.split("::")[-1] if "::" in obj_type else obj_type
+            if type_name not in _CONSTRUCTION_TYPES:
+                continue
+
+            definition = getattr(entity, "definition", None)
+            if definition is None:
+                continue
+
+            idx = item.index
+            params = result.setdefault(idx, {})
+
+            for attr in _DEFINITION_PARAM_ATTRS:
+                try:
+                    p = getattr(definition, attr, None)
+                except Exception:
+                    p = None
+                if p is None:
+                    continue
+                if not hasattr(p, "value") or not hasattr(p, "expression"):
+                    continue
+                try:
+                    param_name = p.name or attr
+                    if param_name in params:
+                        continue
+                    value = p.value
+                    expr = p.expression or ""
+                    role = getattr(p, "role", "") or ""
+                    params[param_name] = (value, expr, role)
+                except Exception:
+                    continue
+        except Exception:
+            continue
+
+
+def attach_params_to_features(features: list, param_map: dict[int, ParamDict]) -> None:
     """Attach parameter dicts to TimelineFeature objects by timeline index.
 
     Mutates each feature in-place, setting ``feature.feature_params``.

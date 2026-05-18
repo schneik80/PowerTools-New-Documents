@@ -2,10 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2022-2026 IMA LLC
 
-"""Generate version diff branch/timeline icons using Pillow.
+"""Generate version merge branch/timeline icons using Pillow.
 
-Concept A: Split timeline - a common root splits into two branches with
-version nodes, connected by a dashed comparison arrow.
+Concept: Inverted Y-fork - two version branches at the top converge
+downward through a merge point onto a single filled result node at the
+bottom. This is the literal inverse of the diff icon and intentionally
+omits the diff icon's horizontal dashed comparison arrow (a merge is not
+a comparison).
 
 Produces: 16x16, 32x32, 64x64 in both light and dark variants.
 """
@@ -17,7 +20,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def draw_icon_small(size, stroke_color):
-    """Simplified icon for 16x16: bold Y-fork with 3 nodes, no dashes or intermediates."""
+    """Simplified icon for 16x16: bold inverted-Y with 3 nodes.
+
+    Two hollow tips at top-left / top-right converge to a single filled
+    result node at the bottom-center. No intermediate merge point or
+    chevron, to keep the 16x16 readable.
+    """
     ss = 4
     big = size * ss
     img = Image.new("RGBA", (big, big), (0, 0, 0, 0))
@@ -29,26 +37,20 @@ def draw_icon_small(size, stroke_color):
     sw = max(3, int(3.5 * s))
     r_node = max(3, int(4.5 * s))
 
-    # Three key points: root bottom-center, two branch tips top-left / top-right
-    root = (int(32 * s), int(54 * s))
-    fork = (int(32 * s), int(30 * s))
+    # Three key points: two branch tips top-left / top-right, result bottom-center
     l_tip = (int(12 * s), int(12 * s))
     r_tip = (int(52 * s), int(12 * s))
-
-    # Trunk
-    draw.line([root, fork], fill=color, width=sw)
+    fork = (int(32 * s), int(34 * s))
+    result = (int(32 * s), int(54 * s))
 
     # Left branch (straight)
-    draw.line([fork, l_tip], fill=color, width=sw)
+    draw.line([l_tip, fork], fill=color, width=sw)
     # Right branch (straight)
-    draw.line([fork, r_tip], fill=color, width=sw)
+    draw.line([r_tip, fork], fill=color, width=sw)
+    # Trunk down to result
+    draw.line([fork, result], fill=color, width=sw)
 
-    # Root node (filled)
-    draw.ellipse([root[0] - r_node, root[1] - r_node,
-                  root[0] + r_node, root[1] + r_node],
-                 fill=color, outline=color)
-
-    # Tip nodes (hollow)
+    # Tip nodes (hollow) - the two versions being merged
     draw.ellipse([l_tip[0] - r_node, l_tip[1] - r_node,
                   l_tip[0] + r_node, l_tip[1] + r_node],
                  fill=None, outline=color, width=sw)
@@ -56,12 +58,17 @@ def draw_icon_small(size, stroke_color):
                   r_tip[0] + r_node, r_tip[1] + r_node],
                  fill=None, outline=color, width=sw)
 
+    # Result node (filled)
+    draw.ellipse([result[0] - r_node, result[1] - r_node,
+                  result[0] + r_node, result[1] + r_node],
+                 fill=color, outline=color)
+
     img = img.resize((size, size), Image.LANCZOS)
     return img
 
 
 def draw_icon(size, stroke_color):
-    """Draw the branch-comparison icon at the given size."""
+    """Draw the inverted-Y merge icon at the given size."""
     # Use 4x supersampling for anti-aliasing
     ss = 4
     big = size * ss
@@ -78,47 +85,46 @@ def draw_icon(size, stroke_color):
     r_big = max(3, int(3.5 * s))
     r_small = max(2, int(2.0 * s))
 
-    # Key coordinates
-    root = (int(32 * s), int(55 * s))
-    bp = (int(32 * s), int(37 * s))
-    l_mid = (int(21 * s), int(23 * s))
-    r_mid = (int(43 * s), int(23 * s))
-    l_end = (int(13 * s), int(13 * s))
-    r_end = (int(51 * s), int(13 * s))
+    # Key coordinates (inverted relative to diff icon)
+    l_top = (int(13 * s), int(13 * s))   # version A (hollow, top-left)
+    r_top = (int(51 * s), int(13 * s))   # version B (hollow, top-right)
+    l_mid = (int(21 * s), int(23 * s))   # intermediate on left branch
+    r_mid = (int(43 * s), int(23 * s))   # intermediate on right branch
+    merge = (int(32 * s), int(38 * s))   # small filled merge point
+    result = (int(32 * s), int(56 * s))  # large filled result node
 
     color = stroke_color
 
     # --- Draw branches using line segments to approximate curves ---
 
-    # Trunk: root to branch point
-    draw.line([root, bp], fill=color, width=sw)
-
-    # Left branch: bp -> curve -> l_mid -> l_end
-    # Approximate cubic bezier with segments
+    # Left branch: l_top -> l_mid -> curve -> merge
+    draw.line([l_top, l_mid], fill=color, width=sw)
     steps = 12
-    prev = bp
+    prev = l_mid
     for i in range(1, steps + 1):
         t = i / steps
-        # Simple quadratic bezier: bp -> control -> l_mid
+        # Quadratic bezier: l_mid -> control -> merge
         ctrl = (int(32 * s), int(28 * s))
-        x = (1-t)**2 * bp[0] + 2*(1-t)*t * ctrl[0] + t**2 * l_mid[0]
-        y = (1-t)**2 * bp[1] + 2*(1-t)*t * ctrl[1] + t**2 * l_mid[1]
+        x = (1-t)**2 * l_mid[0] + 2*(1-t)*t * ctrl[0] + t**2 * merge[0]
+        y = (1-t)**2 * l_mid[1] + 2*(1-t)*t * ctrl[1] + t**2 * merge[1]
         pt = (int(x), int(y))
         draw.line([prev, pt], fill=color, width=sw)
         prev = pt
-    draw.line([l_mid, l_end], fill=color, width=sw)
 
-    # Right branch: bp -> curve -> r_mid -> r_end
-    prev = bp
+    # Right branch: r_top -> r_mid -> curve -> merge
+    draw.line([r_top, r_mid], fill=color, width=sw)
+    prev = r_mid
     for i in range(1, steps + 1):
         t = i / steps
         ctrl = (int(32 * s), int(28 * s))
-        x = (1-t)**2 * bp[0] + 2*(1-t)*t * ctrl[0] + t**2 * r_mid[0]
-        y = (1-t)**2 * bp[1] + 2*(1-t)*t * ctrl[1] + t**2 * r_mid[1]
+        x = (1-t)**2 * r_mid[0] + 2*(1-t)*t * ctrl[0] + t**2 * merge[0]
+        y = (1-t)**2 * r_mid[1] + 2*(1-t)*t * ctrl[1] + t**2 * merge[1]
         pt = (int(x), int(y))
         draw.line([prev, pt], fill=color, width=sw)
         prev = pt
-    draw.line([r_mid, r_end], fill=color, width=sw)
+
+    # Trunk: merge point down to result
+    draw.line([merge, result], fill=color, width=sw)
 
     # --- Nodes ---
     def filled_circle(center, radius):
@@ -131,43 +137,27 @@ def draw_icon(size, stroke_color):
         draw.ellipse([x - radius, y - radius, x + radius, y + radius],
                       fill=None, outline=color, width=sw)
 
-    # Root and branch point (filled)
-    filled_circle(root, r_big)
-    filled_circle(bp, r_big)
+    # Top version nodes (hollow)
+    hollow_circle(l_top, r_big)
+    hollow_circle(r_top, r_big)
 
     # Intermediate nodes (filled, smaller)
     filled_circle(l_mid, r_small)
     filled_circle(r_mid, r_small)
 
-    # End version nodes (hollow)
-    hollow_circle(l_end, r_big)
-    hollow_circle(r_end, r_big)
+    # Merge point (filled, small) and result (filled, large)
+    filled_circle(merge, r_small)
+    filled_circle(result, r_big)
 
-    # --- Dashed comparison arrow between end nodes ---
-    arrow_y = l_end[1]
-    arrow_left = l_end[0] + r_big + int(3 * s)
-    arrow_right = r_end[0] - r_big - int(3 * s)
-
-    # Draw dashed line
-    dash_len = max(3, int(3 * s))
-    gap_len = max(2, int(2.5 * s))
-    x = arrow_left
-    drawing = True
-    while x < arrow_right:
-        seg_end = min(x + (dash_len if drawing else gap_len), arrow_right)
-        if drawing:
-            draw.line([(x, arrow_y), (seg_end, arrow_y)], fill=color, width=sw_thin)
-        x = seg_end
-        drawing = not drawing
-
-    # Arrowheads
-    ah = max(3, int(3 * s))
-    # Left arrowhead (pointing left)
-    draw.line([(arrow_left + ah, arrow_y - ah), (arrow_left, arrow_y)], fill=color, width=sw_thin)
-    draw.line([(arrow_left + ah, arrow_y + ah), (arrow_left, arrow_y)], fill=color, width=sw_thin)
-    # Right arrowhead (pointing right)
-    draw.line([(arrow_right - ah, arrow_y - ah), (arrow_right, arrow_y)], fill=color, width=sw_thin)
-    draw.line([(arrow_right - ah, arrow_y + ah), (arrow_right, arrow_y)], fill=color, width=sw_thin)
+    # --- Downward chevron just above the result to emphasize merge direction ---
+    chev_y = result[1] - r_big - int(5 * s)
+    chev_half_w = int(4 * s)
+    chev_h = int(3 * s)
+    cx = result[0]
+    draw.line([(cx - chev_half_w, chev_y - chev_h), (cx, chev_y)],
+              fill=color, width=sw_thin)
+    draw.line([(cx + chev_half_w, chev_y - chev_h), (cx, chev_y)],
+              fill=color, width=sw_thin)
 
     # Downsample with high-quality resampling
     img = img.resize((size, size), Image.LANCZOS)
